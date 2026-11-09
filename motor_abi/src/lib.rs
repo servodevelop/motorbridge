@@ -2,6 +2,7 @@ use motor_core::bus::{open_transport, CanBus, Transport, TransportParams};
 use motor_core::dm_device::DmDeviceType;
 use motor_core::CoreController;
 use motor_vendor_damiao::{ControlMode as DamiaoControlMode, DamiaoController, DamiaoMotor};
+use motor_vendor_fashionstar::{FashionstarController, FashionstarMotor};
 use motor_vendor_hexfellow::{
     HexfellowController, HexfellowMotor, MitTarget as HexfellowMitTarget,
     PosVelTarget as HexfellowPosVelTarget,
@@ -34,7 +35,7 @@ const ABI_CAPABILITIES: &str = r#"{
     "version": "__MOTORBRIDGE_VERSION__"
   },
   "transports": ["socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial"],
-  "vendors": ["damiao", "robstride", "myactuator", "hexfellow", "hightorque"],
+  "vendors": ["damiao", "robstride", "myactuator", "hexfellow", "hightorque", "fashionstar"],
   "features": {
     "state_cache": true,
     "state_snapshot_metadata": true,
@@ -44,7 +45,8 @@ const ABI_CAPABILITIES: &str = r#"{
     "robstride": ["ping", "ping_host_id", "fault_report", "active_report", "device_id", "param_i8", "param_u8", "param_u16", "param_u32", "param_f32", "param_f32_host_id", "pos_vel_pp", "pos_vel_csp"],
     "myactuator": ["param_i8", "param_u8", "param_u16", "param_u32", "param_f32"],
     "hexfellow": ["socketcanfd", "mit", "pos_vel"],
-    "hightorque": ["mit", "vel", "pos_vel", "pos_vel_acc", "pos_classic", "torque", "dq_voltage", "dq_current", "brake", "set_run_mode", "write_register", "periodic_report", "request_register", "get_register", "fault_code"]
+    "hightorque": ["mit", "vel", "pos_vel", "pos_vel_acc", "pos_classic", "torque", "dq_voltage", "dq_current", "brake", "set_run_mode", "write_register", "periodic_report", "request_register", "get_register", "fault_code"],
+    "fashionstar": ["pos_vel", "register_u32", "position_state", "stop", "set_zero", "power_cycle_config"]
   }
 }"#;
 
@@ -138,6 +140,7 @@ struct BoundController {
     myactuator: Option<MyActuatorController>,
     robstride: Option<RobstrideController>,
     hightorque: Option<HightorqueController>,
+    fashionstar: Option<FashionstarController>,
 }
 
 impl BoundController {
@@ -150,6 +153,7 @@ impl BoundController {
             myactuator: None,
             robstride: None,
             hightorque: None,
+            fashionstar: None,
         }
     }
 }
@@ -163,6 +167,7 @@ enum Vendor {
     MyActuator,
     Robstride,
     Hightorque,
+    Fashionstar,
 }
 
 impl Vendor {
@@ -173,6 +178,7 @@ impl Vendor {
             Vendor::MyActuator => "MyActuator",
             Vendor::Robstride => "RobStride",
             Vendor::Hightorque => "HighTorque",
+            Vendor::Fashionstar => "FashionStar",
         }
     }
 
@@ -305,6 +311,12 @@ ensure_vendor_controller!(
     HightorqueController,
     hightorque
 );
+ensure_vendor_controller!(
+    ensure_fashionstar_controller,
+    Vendor::Fashionstar,
+    FashionstarController,
+    fashionstar
+);
 
 // Damiao: the eager dm-serial/dm-device path keeps its own `DamiaoController`
 // (own core) and must short-circuit before `ensure_bound` (which only handles
@@ -329,6 +341,7 @@ enum MotorHandleInner {
     MyActuator(Arc<MyActuatorMotor>),
     Robstride(Arc<RobstrideMotor>),
     Hightorque(Arc<HightorqueMotor>),
+    Fashionstar(Arc<FashionstarMotor>),
 }
 
 #[repr(C)]

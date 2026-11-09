@@ -18,6 +18,7 @@ motor_vendor_hexfellow = { path = "../motor_vendors/hexfellow" }
 motor_vendor_hightorque = { path = "../motor_vendors/hightorque" }
 motor_vendor_myactuator = { path = "../motor_vendors/myactuator" }
 motor_vendor_robstride = { path = "../motor_vendors/robstride" }
+motor_vendor_fashionstar = { path = "../motor_vendors/fashionstar" }
 parking_lot = "0.12.5"
 
 [dev-dependencies]
