@@ -1,17 +1,17 @@
-use crate::bus::CanBus;
+use crate::bus::{BusFrame, CanBus, CanFrame};
 use crate::controller::CoreController;
 use crate::device::MotorDevice;
 use crate::error::{MotorError, Result};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
-pub struct VendorController<M: MotorDevice + 'static> {
-    core: Arc<CoreController>,
+pub struct VendorController<M: MotorDevice<T> + 'static, T: BusFrame = CanFrame> {
+    core: Arc<CoreController<T>>,
     motors: Mutex<HashMap<u16, Arc<M>>>,
 }
 
-impl<M: MotorDevice + 'static> VendorController<M> {
-    pub fn new(bus: Arc<dyn CanBus>) -> Self {
+impl<M: MotorDevice<T> + 'static, T: BusFrame> VendorController<M, T> {
+    pub fn new(bus: Arc<dyn CanBus<T>>) -> Self {
         Self {
             core: Arc::new(CoreController::new(bus)),
             motors: Mutex::new(HashMap::new()),
@@ -25,23 +25,23 @@ impl<M: MotorDevice + 'static> VendorController<M> {
     /// `disable_all` / `poll_feedback_once` / `shutdown` / `close_bus` operate
     /// on every device in the shared core regardless of vendor. The vendor's
     /// own `motors` map is kept only for `get_motor` lookups.
-    pub fn new_shared(core: Arc<CoreController>) -> Self {
+    pub fn new_shared(core: Arc<CoreController<T>>) -> Self {
         Self {
             core,
             motors: Mutex::new(HashMap::new()),
         }
     }
 
-    pub fn bus(&self) -> Arc<dyn CanBus> {
+    pub fn bus(&self) -> Arc<dyn CanBus<T>> {
         self.core.bus()
     }
 
     pub fn add_motor_with<F>(&self, motor_id: u16, builder: F) -> Result<Arc<M>>
     where
-        F: FnOnce(Arc<dyn CanBus>) -> Result<M>,
+        F: FnOnce(Arc<dyn CanBus<T>>) -> Result<M>,
     {
         let motor = Arc::new(builder(self.core.bus())?);
-        let device: Arc<dyn MotorDevice> = motor.clone();
+        let device: Arc<dyn MotorDevice<T>> = motor.clone();
         self.core.add_device(device)?;
         self.motors
             .lock()

@@ -1,4 +1,4 @@
-use crate::bus::CanBus;
+use crate::bus::{BusFrame, CanBus, CanFrame};
 use crate::device::MotorDevice;
 use crate::error::{MotorError, Result};
 use std::collections::HashMap;
@@ -13,9 +13,11 @@ enum PollingMode {
     Manual,
 }
 
-pub struct CoreController {
-    bus: Arc<dyn CanBus>,
-    devices: Arc<Mutex<HashMap<u16, Arc<dyn MotorDevice>>>>,
+type DeviceMap<T> = HashMap<u16, Arc<dyn MotorDevice<T>>>;
+
+pub struct CoreController<T: BusFrame = CanFrame> {
+    bus: Arc<dyn CanBus<T>>,
+    devices: Arc<Mutex<DeviceMap<T>>>,
     polling_mode: PollingMode,
     recv_lock: Arc<Mutex<()>>,
     tx_gap_ns: Arc<AtomicU64>,
@@ -25,20 +27,20 @@ pub struct CoreController {
     polling_start_lock: Mutex<()>,
 }
 
-impl CoreController {
+impl<T: BusFrame> CoreController<T> {
     // Pace broadcast-like per-motor operations (enable/disable) to avoid burst writes on a busy bus.
     const DEFAULT_BULK_OP_GAP_MS: u64 = 2;
     // Auto pacing for multi-motor continuous TX (small enough to avoid obvious loop-frequency impact).
     const AUTO_MULTI_MOTOR_TX_GAP_US: u64 = 120;
 
-    pub fn new(bus: Arc<dyn CanBus>) -> Self {
+    pub fn new(bus: Arc<dyn CanBus<T>>) -> Self {
         Self::new_internal(bus, PollingMode::Background)
     }
 
-    fn new_internal(bus: Arc<dyn CanBus>, polling_mode: PollingMode) -> Self {
+    fn new_internal(bus: Arc<dyn CanBus<T>>, polling_mode: PollingMode) -> Self {
         let (initial_tx_gap_ns, tx_gap_env_override) = Self::resolve_tx_gap_from_env();
         let tx_gap_ns = Arc::new(AtomicU64::new(initial_tx_gap_ns));
-        let bus: Arc<dyn CanBus> = Arc::new(TxPacedBus::new(bus, Arc::clone(&tx_gap_ns)));
+        let bus: Arc<dyn CanBus<T>> = Arc::new(TxPacedBus::new(bus, Arc::clone(&tx_gap_ns)));
 
         Self {
             bus,
@@ -53,11 +55,11 @@ impl CoreController {
         }
     }
 
-    pub fn bus(&self) -> Arc<dyn CanBus> {
+    pub fn bus(&self) -> Arc<dyn CanBus<T>> {
         Arc::clone(&self.bus)
     }
 
-    pub fn add_device(&self, device: Arc<dyn MotorDevice>) -> Result<()> {
+    pub fn add_device(&self, device: Arc<dyn MotorDevice<T>>) -> Result<()> {
         let motor_id = device.motor_id();
         let device_count = {
             let mut devices = self
@@ -95,7 +97,7 @@ impl CoreController {
             .lock()
             .map_err(|_| MotorError::Io("recv lock poisoned".to_string()))?;
         while let Some(frame) = self.bus.recv(Duration::from_millis(0))? {
-            if !frame.is_rx {
+            if !frame.is_rx() {
                 continue;
             }
             let devices = self
@@ -124,7 +126,7 @@ impl CoreController {
         self.apply_bulk_device_op(|d| d.disable())
     }
 
-    fn sorted_devices(&self) -> Result<Vec<Arc<dyn MotorDevice>>> {
+    fn sorted_devices(&self) -> Result<Vec<Arc<dyn MotorDevice<T>>>> {
         let mut devices = self
             .devices
             .lock()
@@ -138,7 +140,7 @@ impl CoreController {
 
     fn apply_bulk_device_op<F>(&self, mut op: F) -> Result<()>
     where
-        F: FnMut(&Arc<dyn MotorDevice>) -> Result<()>,
+        F: FnMut(&Arc<dyn MotorDevice<T>>) -> Result<()>,
     {
         let devices = self.sorted_devices()?;
         let gap = Self::bulk_op_gap();
@@ -205,7 +207,7 @@ impl CoreController {
                 };
                 match recv_result {
                     Ok(Some(frame)) => {
-                        if frame.is_rx {
+                        if frame.is_rx() {
                             let snapshot = match devices.lock() {
                                 Ok(m) => m.values().cloned().collect::<Vec<_>>(),
                                 Err(_) => {
@@ -281,20 +283,20 @@ impl CoreController {
     }
 }
 
-impl Drop for CoreController {
+impl<T: BusFrame> Drop for CoreController<T> {
     fn drop(&mut self) {
         let _ = self.stop_polling_thread();
     }
 }
 
-struct TxPacedBus {
-    inner: Arc<dyn CanBus>,
+struct TxPacedBus<T> {
+    inner: Arc<dyn CanBus<T>>,
     min_gap_ns: Arc<AtomicU64>,
     last_send: Mutex<Option<Instant>>,
 }
 
-impl TxPacedBus {
-    fn new(inner: Arc<dyn CanBus>, min_gap_ns: Arc<AtomicU64>) -> Self {
+impl<T> TxPacedBus<T> {
+    fn new(inner: Arc<dyn CanBus<T>>, min_gap_ns: Arc<AtomicU64>) -> Self {
         Self {
             inner,
             min_gap_ns,
@@ -303,8 +305,8 @@ impl TxPacedBus {
     }
 }
 
-impl CanBus for TxPacedBus {
-    fn send(&self, frame: crate::bus::CanFrame) -> Result<()> {
+impl<T> CanBus<T> for TxPacedBus<T> {
+    fn send(&self, frame: T) -> Result<()> {
         let gap_ns = self.min_gap_ns.load(Ordering::Acquire);
         if gap_ns > 0 {
             let min_gap = Duration::from_nanos(gap_ns);
@@ -323,7 +325,7 @@ impl CanBus for TxPacedBus {
         self.inner.send(frame)
     }
 
-    fn recv(&self, timeout: Duration) -> Result<Option<crate::bus::CanFrame>> {
+    fn recv(&self, timeout: Duration) -> Result<Option<T>> {
         self.inner.recv(timeout)
     }
 
@@ -338,7 +340,10 @@ mod tests {
     use crate::bus::CanFrame;
     use crate::device::MotorDevice;
     use crate::test_support::MockBus;
+    use crate::vendor_controller::VendorController;
+    use std::collections::VecDeque;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::sync::mpsc;
 
     struct FakeDevice {
         id: u16,
@@ -394,6 +399,88 @@ mod tests {
         fn process_feedback_frame(&self, _frame: CanFrame) -> Result<()> {
             self.processed_count.fetch_add(1, Ordering::SeqCst);
             Ok(())
+        }
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct TestFrame {
+        device_id: u16,
+        data: Vec<u8>,
+        is_rx: bool,
+    }
+
+    impl BusFrame for TestFrame {
+        fn is_rx(&self) -> bool {
+            self.is_rx
+        }
+    }
+
+    #[derive(Default)]
+    struct MockFrameBus {
+        rx: Mutex<VecDeque<TestFrame>>,
+        sent: Mutex<Vec<TestFrame>>,
+    }
+
+    impl CanBus<TestFrame> for MockFrameBus {
+        fn send(&self, frame: TestFrame) -> Result<()> {
+            self.sent.lock().unwrap().push(frame);
+            Ok(())
+        }
+
+        fn recv(&self, _timeout: Duration) -> Result<Option<TestFrame>> {
+            Ok(self.rx.lock().unwrap().pop_front())
+        }
+
+        fn shutdown(&self) -> Result<()> {
+            Ok(())
+        }
+    }
+
+    struct FakeFrameDevice {
+        id: u16,
+        feedback: mpsc::Sender<(u16, TestFrame)>,
+    }
+
+    impl MotorDevice<TestFrame> for FakeFrameDevice {
+        fn vendor(&self) -> &'static str {
+            "fake"
+        }
+
+        fn model(&self) -> &str {
+            "fake-frame-model"
+        }
+
+        fn motor_id(&self) -> u16 {
+            self.id
+        }
+
+        fn feedback_id(&self) -> u16 {
+            self.id
+        }
+
+        fn enable(&self) -> Result<()> {
+            Ok(())
+        }
+
+        fn disable(&self) -> Result<()> {
+            Ok(())
+        }
+
+        fn accepts_frame(&self, frame: &TestFrame) -> bool {
+            frame.device_id == self.id
+        }
+
+        fn process_feedback_frame(&self, frame: TestFrame) -> Result<()> {
+            self.feedback.send((self.id, frame)).unwrap();
+            Ok(())
+        }
+    }
+
+    fn test_frame(device_id: u16, len: usize, is_rx: bool) -> TestFrame {
+        TestFrame {
+            device_id,
+            data: (0..len).map(|i| i as u8).collect(),
+            is_rx,
         }
     }
 
@@ -508,5 +595,55 @@ mod tests {
         }
 
         assert_eq!(Arc::strong_count(&bus), 1);
+    }
+
+    #[test]
+    fn custom_frames_send_and_route_in_both_polling_modes() {
+        for mode in [PollingMode::Manual, PollingMode::Background] {
+            let bus = Arc::new(MockFrameBus::default());
+            let core = Arc::new(CoreController::new_internal(bus.clone(), mode));
+            let ctrl: VendorController<FakeFrameDevice, TestFrame> =
+                VendorController::new_shared(core);
+            let (feedback_tx, feedback_rx) = mpsc::channel();
+            for id in 1..=2 {
+                ctrl.add_motor_with(id, |_| {
+                    Ok(FakeFrameDevice {
+                        id,
+                        feedback: feedback_tx.clone(),
+                    })
+                })
+                .expect("add device");
+            }
+
+            ctrl.bus()
+                .send(test_frame(1, 256, false))
+                .expect("send frame");
+            assert_eq!(
+                bus.sent.lock().unwrap().as_slice(),
+                &[test_frame(1, 256, false)]
+            );
+
+            bus.rx.lock().unwrap().extend([
+                test_frame(1, 256, false),
+                test_frame(3, 256, true),
+                test_frame(2, 16, true),
+                test_frame(1, 256, true),
+            ]);
+            if mode == PollingMode::Manual {
+                ctrl.poll_feedback_once().expect("poll frames");
+            }
+            for expected in [test_frame(2, 16, true), test_frame(1, 256, true)] {
+                let (device_id, actual) = feedback_rx
+                    .recv_timeout(Duration::from_secs(1))
+                    .expect("routed frame");
+                assert_eq!(device_id, expected.device_id);
+                assert_eq!(actual, expected);
+            }
+            ctrl.close_bus().expect("close controller");
+            assert!(matches!(
+                feedback_rx.try_recv(),
+                Err(mpsc::TryRecvError::Empty)
+            ));
+        }
     }
 }

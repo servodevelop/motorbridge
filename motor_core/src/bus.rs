@@ -22,9 +22,20 @@ pub struct CanFrame {
     pub is_rx: bool,
 }
 
-pub trait CanBus: Send + Sync {
-    fn send(&self, frame: CanFrame) -> Result<()>;
-    fn recv(&self, timeout: Duration) -> Result<Option<CanFrame>>;
+/// Frame metadata used by the controller's receive loop.
+pub trait BusFrame: 'static {
+    fn is_rx(&self) -> bool;
+}
+
+impl BusFrame for CanFrame {
+    fn is_rx(&self) -> bool {
+        self.is_rx
+    }
+}
+
+pub trait CanBus<T = CanFrame>: Send + Sync {
+    fn send(&self, frame: T) -> Result<()>;
+    fn recv(&self, timeout: Duration) -> Result<Option<T>>;
     fn shutdown(&self) -> Result<()>;
 }
 
