@@ -51,6 +51,7 @@ pub(crate) enum Transport {
     DmSerial,
     DmDevice,
     McuSerial,
+    Uart,
 }
 
 impl Transport {
@@ -64,6 +65,7 @@ impl Transport {
             "dm-serial" => Ok(Self::DmSerial),
             "dm-device" => Ok(Self::DmDevice),
             "mcu-serial" => Ok(Self::McuSerial),
+            "uart" => Ok(Self::Uart),
             _ => Err(format!("unsupported transport: {s}")),
         }
     }
@@ -76,6 +78,7 @@ impl Transport {
             Self::DmSerial => "dm-serial",
             Self::DmDevice => "dm-device",
             Self::McuSerial => "mcu-serial",
+            Self::Uart => "uart",
         }
     }
 }

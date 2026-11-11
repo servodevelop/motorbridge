@@ -102,10 +102,10 @@ motorbridge-gateway -- --bind 127.0.0.1:9002 --vendor robstride --channel can0@1
 | --- | --- | --- | --- |
 | `--bind` | string | `127.0.0.1:9002` | WebSocket 监听地址 |
 | `--vendor` | enum | `damiao` | 默认厂商：`damiao` / `robstride` / `hexfellow` / `myactuator` / `hightorque` / `fashionstar` |
-| `--transport` | enum | `auto` | 链路：`auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` |
+| `--transport` | enum | `auto` | 链路：`auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` / `uart` |
 | `--channel` | string | `can0` | CAN 通道。Linux 通常 `can0`；Windows PCAN 可用 `can0@1000000` |
-| `--serial-port` | string | `/dev/ttyACM0` | Damiao `dm-serial` 串口设备 |
-| `--serial-baud` | u32 | `921600` | Damiao `dm-serial` 波特率 |
+| `--serial-port` | string | `/dev/ttyACM0` | 串口链路设备 |
+| `--serial-baud` | u32 | `921600` | 串口链路波特率 |
 | `--dm-device-type` | string | `usb2canfd-dual` | Damiao `dm-device` 适配器类型：`usb2canfd` / `usb2canfd-dual` / `linkx4c` |
 | `--dm-channel` | string | `0` | Damiao `dm-device` 控制通道：`usb2canfd` 用 `0`，`usb2canfd-dual` 用 `0` / `1`，`linkx4c` 用 SDK 通道 `0` / `1` / `2` / `3`；scan 消息不带 `dm_channel` 时会扫描所选适配器全部通道 |
 | `--model` | string | 厂商默认 | 电机型号，例如 `4340P` / `rs-00` |
@@ -283,8 +283,8 @@ RobStride 返回：
 | `vendor` | string | 当前 vendor | 目标厂商 |
 | `transport` | string | 当前 transport | 链路 |
 | `channel` | string | 当前 channel | CAN 通道 |
-| `serial_port` | string | 当前 serial_port | `dm-serial` 串口 |
-| `serial_baud` | u32 | 当前 serial_baud | `dm-serial` 波特率 |
+| `serial_port` | string | 当前 serial_port | 串口链路设备 |
+| `serial_baud` | u32 | 当前 serial_baud | 串口链路波特率 |
 | `dm_device_type` | string | 当前 dm_device_type | `dm-device` 适配器类型；也接受 `dm-device-type` |
 | `dm_channel` | string | 当前 dm_channel | `dm-device` 通道；也接受 `dm-channel` |
 | `model` | string | 当前 model | 型号 |
@@ -332,7 +332,7 @@ RobStride：
 | Hexfellow | `enable_all()` |
 | MyActuator | `enable_all()` |
 | HighTorque | 语义空操作（方案 B，2026-10-08）：协议无使能帧且命令即执行，不发帧直接返回成功，与统一 enable 流程及混总线 `enable_all()` 兼容；清错/停机走 `disable`/`stop` |
-| FashionStar | 当前位置锁力（`0x7B=0x11`） |
+| FashionStar | 当前位置锁力（CAN `0x7B=0x11`；UART `0x18`，模式 `0x11`） |
 
 请求：
 
@@ -376,7 +376,7 @@ RobStride：
 | Hexfellow | 发送零 MIT |
 | MyActuator | `stop_motor()` |
 | HighTorque | 发送停止帧（vendor `disable`，同 stop/clear_error） |
-| FashionStar | 停止锁力（`0x7B=0x11`）；disable 卸力 |
+| FashionStar | 停止锁力（CAN `0x7B=0x11`；UART `0x18`，模式 `0x11`）；disable 卸力 |
 
 请求：
 
@@ -670,7 +670,7 @@ Damiao 周期推送：
 | Hexfellow | 是 | 转成 rev / rev/s |
 | HighTorque | 是 | v2.0.0 位打包 MIT 帧（`0x18000 \| id`，固件 v4.6.0+），`kp/kd` 打包进帧；超量程饱和 |
 | MyActuator | 否 | 返回 unsupported |
-| FashionStar | 暂不支持 | 定量力矩 CAN 编码尚未映射 |
+| FashionStar | 暂不支持 | 定量力矩控制尚未映射 |
 
 参数：
 
@@ -910,7 +910,7 @@ RobStride：
 | MyActuator | `set_current_position_as_zero()` |
 | Hexfellow | 不支持 |
 | HighTorque | `set_zero_position()`（0x40 置零帧，vendor 自动落盘） |
-| FashionStar | 卸力，等待 50 ms 后设置当前位置为零 |
+| FashionStar | CAN：卸力，等待 50 ms 后设置当前位置为零；UART：`0x17` 设置当前位置为原点 |
 ```
 
 返回：
@@ -984,7 +984,7 @@ Hexfellow mode：
 | Hexfellow | poll feedback once |
 | MyActuator | request status 后 poll |
 | HighTorque | vendor `request_motor_feedback` + `latest_state`（2026-10-24 起连发两帧：17 01 位置/速度/力矩 + 16 0E 温度/错误码，非阻塞；回帧物理量带力矩系数补偿，26 0E 回帧就地补丁 t_mos/fault_code 不推进状态计数） |
-| FashionStar | 主动查询位置 `0x15/0x16`、状态 `0x14`、温度 `0x13` 和电流 `0x11`；速度由相邻位置采样估算；`torq` 为电流 A |
+| FashionStar | CAN 查询位置 `0x15/0x16`、状态 `0x14`、温度 `0x13` 和电流 `0x11`；UART 使用 `0x16` 监控指令；速度由相邻位置采样估算，`torq` 为电流 A |
 
 请求：
 
@@ -1569,8 +1569,8 @@ HighTorque 协议专属。`volt` 单位 V（0.1 V/LSB）；协议只定义 Q 分
 | `vendor` | string | 当前 vendor | 扫描厂商 |
 | `transport` | string | 当前 transport | 链路 |
 | `channel` | string | 当前 channel | CAN 通道 |
-| `serial_port` | string | 当前 serial_port | `dm-serial` 串口 |
-| `serial_baud` | u32 | 当前 serial_baud | `dm-serial` 波特率 |
+| `serial_port` | string | 当前 serial_port | 串口链路设备 |
+| `serial_baud` | u32 | 当前 serial_baud | 串口链路波特率 |
 | `dm_device_type` | string | 当前 dm_device_type | `dm-device` 适配器类型 |
 | `dm_channel` | string | 不传则 all | `dm-device` 扫描通道；不传会扫描所选适配器全部通道：`usb2canfd` 为 `0`，`usb2canfd-dual` 为 `0|1`，`linkx4c` 为 `0|1|2|3`；传通道则只扫指定通道 |
 | `start_id` | u16 | 厂商默认 | 起始 ID |

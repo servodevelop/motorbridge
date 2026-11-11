@@ -133,7 +133,7 @@ DM_Device_SDK 是用于控制 CAN/CAN FD 设备的软件开发工具包。motorb
   - 型号: `hexfellow`（运行时字符串，CANopen 配置）
   - 模式: `scan`, `status`, `enable`, `disable`, `pos-vel`, `mit`（通过 `socketcanfd`）
 - FashionStar:
-  - 型号: `fashionstar`（运行时字符串，当前忽略）
+  - 型号: `fashionstar`（CAN）、`uart`（原生 UART/RS-485）
   - 模式: `scan`, `ping`, `status`, `enable`, `disable`, `stop`, `pos-vel`, `zero`, 参数读写；改 ID 使用 `--set-motor-id`
   - 说明: 配置修改重新上电后生效；连续速度、MIT/定量力矩、FORCE_POS 暂不支持
 
@@ -217,7 +217,7 @@ flowchart TB
 - [`motor_vendors/hightorque`](motor_vendors/hightorque): HighTorque 原生 ht_can 协议实现
 - [`motor_vendors/robstride`](motor_vendors/robstride): RobStride 扩展 CAN 协议 / 型号 / 参数
 - [`motor_vendors/myactuator`](motor_vendors/myactuator): MyActuator CAN 协议实现
-- [`motor_vendors/fashionstar`](motor_vendors/fashionstar): FashionStar 经典 CAN 协议实现
+- [`motor_vendors/fashionstar`](motor_vendors/fashionstar): FashionStar CAN 与 UART/RS-485 协议实现
 - [`motor_cli`](motor_cli): 统一 Rust CLI
   - 全参数英文文档: [`motor_cli/README.md`](motor_cli/README.md)
   - 全参数中文文档: [`motor_cli/README.zh-CN.md`](motor_cli/README.zh-CN.md)

@@ -8,10 +8,11 @@ macro_rules! dispatch_controller {
             // Shared-core multi-vendor path: route to the one CoreController,
             // which iterates every device in its table regardless of vendor.
             ControllerInner::Bound(b) => b.core.$method().map_err(|e| e.to_string()),
+            ControllerInner::FashionstarUart(ctrl) => ctrl.$method().map_err(|e| e.to_string()),
             ControllerInner::Unbound(_) => Err(
                 "controller has no motor; add a motor before calling this operation".to_string(),
             ),
-            ControllerInner::UnboundMcuSerial { .. } => Err(
+            ControllerInner::UnboundMcuSerial { .. } | ControllerInner::UnboundUart { .. } => Err(
                 "controller has no motor; add a motor before calling this operation".to_string(),
             ),
         }
@@ -154,6 +155,27 @@ pub extern "C" fn motor_controller_new_mcu_serial(
             port: serial_port,
             baud,
         }),
+    }))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn motor_controller_new_uart(
+    serial_port: *const c_char,
+    baud: u32,
+) -> *mut MotorController {
+    let port = match parse_cstr(serial_port, "serial_port") {
+        Ok(port) => port,
+        Err(e) => {
+            set_last_error(e);
+            return ptr::null_mut();
+        }
+    };
+    if port.is_empty() || baud == 0 {
+        set_last_error("UART requires a serial port and positive baud rate");
+        return ptr::null_mut();
+    }
+    Box::into_raw(Box::new(MotorController {
+        inner: Mutex::new(ControllerInner::UnboundUart { port, baud }),
     }))
 }
 

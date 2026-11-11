@@ -101,11 +101,11 @@ def _build_parser() -> argparse.ArgumentParser:
     scan.add_argument(
         "--transport",
         default="auto",
-        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial"],
+        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart"],
         help="transport backend; dm-serial/dm-device are Damiao-only; mcu-serial is a vendor-agnostic UART-to-CAN MCU bridge",
     )
-    scan.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for dm-serial")
-    scan.add_argument("--serial-baud", type=int, default=921600, help="baud rate for dm-serial")
+    scan.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for serial transports")
+    scan.add_argument("--serial-baud", type=int, default=921600, help="baud rate for serial transports")
     scan.add_argument(
         "--dm-device-type",
         default="usb2canfd-dual",

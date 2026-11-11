@@ -22,12 +22,25 @@ pub struct CanFrame {
     pub is_rx: bool,
 }
 
+/// Native serial payload, excluding transport headers, length and checksum.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UartFrame {
+    pub data: Vec<u8>,
+    pub is_rx: bool,
+}
+
 /// Frame metadata used by the controller's receive loop.
 pub trait BusFrame: 'static {
     fn is_rx(&self) -> bool;
 }
 
 impl BusFrame for CanFrame {
+    fn is_rx(&self) -> bool {
+        self.is_rx
+    }
+}
+
+impl BusFrame for UartFrame {
     fn is_rx(&self) -> bool {
         self.is_rx
     }

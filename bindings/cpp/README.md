@@ -45,6 +45,8 @@ feedback is available. Only complete state updates advance the sequence.
 - `add_hightorque_motor(motor_id, feedback_id, model)`
 - `add_fashionstar_motor(motor_id, feedback_id, model)`
 
+For native FashionStar UART/RS-485, use `Controller::from_uart(serial_port, baud)` (default baud 115200), then `add_fashionstar_motor(motor_id, 0x321, "uart")`.
+
 ## Quick Start
 
 Damiao:

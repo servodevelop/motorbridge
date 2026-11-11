@@ -21,6 +21,7 @@ fn open_fashionstar_controller(
     let bus: Arc<dyn CanBus> = match transport {
         "auto" | "socketcan" => open_transport(Transport::SocketCan, &p)?,
         "mcu-serial" => open_transport(Transport::McuSerial, &p)?,
+        "uart" => return Ok(FashionstarController::new_uart(serial_port, serial_baud)?),
         "socketcanfd" => {
             return Err(
                 "transport socketcanfd unsupported (fashionstar uses standard CAN only)".into(),
@@ -28,13 +29,13 @@ fn open_fashionstar_controller(
         }
         "dm-serial" | "dm-device" => {
             return Err(format!(
-                "transport {transport} is damiao-only (fashionstar supports auto|socketcan|mcu-serial)"
+                "transport {transport} is damiao-only (fashionstar supports auto|socketcan|mcu-serial|uart)"
             )
             .into());
         }
         _ => {
             return Err(format!(
-                "unknown FashionStar transport: {transport} (expected auto|socketcan|mcu-serial)"
+                "unknown FashionStar transport: {transport} (expected auto|socketcan|mcu-serial|uart)"
             )
             .into());
         }

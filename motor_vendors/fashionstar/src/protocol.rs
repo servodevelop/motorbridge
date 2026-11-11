@@ -101,7 +101,7 @@ pub(crate) fn temperature_c(raw: u16) -> f32 {
     if !(1..4096).contains(&raw) {
         return f32::NAN;
     }
-    // Default NTC conversion used by the official CAN SDK and web tool.
+    // Default NTC conversion used by the official CAN and UART web tools.
     let ratio = f64::from(raw) / (4096.0 - f64::from(raw));
     (1.0 / (1.0 / 298.15 + ratio.ln() / 3435.0) - 273.15) as f32
 }

@@ -98,10 +98,10 @@ Notes:
 |---|---|---|---|
 | `--help` | flag | off | Prints CLI help and exits |
 | `--vendor` | string | `damiao` | `damiao`, `robstride`, `robstride_cia402`, `robstride_mit`, `hightorque`, `myactuator`, `hexfellow`, `all` |
-| `--transport` | string | `auto` | `auto`, `socketcan`, `socketcanfd`, `dm-serial`, `dm-device` (`socketcanfd` is Hexfellow-required path; `dm-serial`/`dm-device` are Damiao-only) |
+| `--transport` | string | `auto` | `auto`, `socketcan`, `socketcanfd`, `dm-serial`, `dm-device`, `uart` (`socketcanfd` is Hexfellow-required path; `dm-serial`/`dm-device` are Damiao-only) |
 | `--channel` | string | `can0` | Linux: SocketCAN interface name (`can0`); Windows (PCAN backend): `can0`/`can1` with optional `@bitrate` suffix (for example `can0@1000000`); macOS (PCBUSB backend): `can0`/`can1` |
-| `--serial-port` | string | `/dev/ttyACM0` | Used when `--transport dm-serial` |
-| `--serial-baud` | u64 | `921600` | Used when `--transport dm-serial` |
+| `--serial-port` | string | `/dev/ttyACM0` | Used by serial transports |
+| `--serial-baud` | u64 | `921600` | Used by serial transports |
 | `--dm-device-type` | string | `usb2canfd-dual` | Used when `--transport dm-device`; accepted values: `usb2canfd`, `usb2canfd-dual`, `linkx4c` |
 | `--dm-channel` | string | control: `0`; scan: all if omitted | Used when `--transport dm-device`; `usb2canfd` accepts `0`, `usb2canfd-dual` accepts `0`/`1`, and `linkx4c` accepts `0`/`1`/`2`/`3`. In `--mode scan`, omit it to scan all channels for the selected adapter. |
 | `--model` | string | vendor dependent | `4340` for Damiao, `rs-00` for RobStride / RobStride CiA402 / RobStride MIT, `hightorque` for HighTorque, `X8` for MyActuator |
@@ -656,7 +656,7 @@ motor_cli \
 
 ## 11. Vendor = `fashionstar`
 
-Classic CAN, ServoID 0..254, fixed `feedback_id=0x321`. Supports POS_VEL, hold/release output, stop, zero, raw integer registers, position/status/temperature/current queries and estimated velocity feedback. `torq` carries current in A. Configuration requires a power cycle. Continuous velocity and MIT/quantitative torque are currently unsupported. See [FASHIONSTAR_API.md](FASHIONSTAR_API.md) for arguments and examples.
+CAN (`model=fashionstar`) or native UART/RS-485 (`model=uart`, `transport=uart`). ServoID 0..254; `feedback_id=0x321` is an interface placeholder for UART. Supports POS_VEL, hold/release output, stop, zero, raw integer registers, position/status/temperature/current queries and estimated velocity feedback. `torq` carries current in A. Configuration requires a power cycle. Continuous velocity and MIT/quantitative torque are currently unsupported. See [FASHIONSTAR_API.md](FASHIONSTAR_API.md) for arguments and examples.
 
 ## 12. Practical Notes
 

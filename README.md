@@ -155,7 +155,7 @@ available.
 | MyActuator | `myactuator` | MyActuator standard CAN protocol |
 | HighTorque | `hightorque` | Native `ht_can v2.0.0` direct CAN path |
 | Hexfellow | `hexfellow` | CANopen-over-CAN-FD path |
-| FashionStar | `fashionstar` | Classic CAN, fixed arbitration ID `0x321`, POS_VEL / raw integer registers |
+| FashionStar | `fashionstar` | CAN (`model=fashionstar`) or UART/RS-485 (`model=uart`), POS_VEL / raw integer registers |
 
 ### CAN Adapters And Bridge Modules
 
@@ -201,7 +201,7 @@ files there when new hardware photos become available.
   - models: `hexfellow` (runtime string; CANopen profile)
   - modes: `scan`, `status`, `enable`, `disable`, `pos-vel`, `mit` (via `socketcanfd`)
 - FashionStar:
-  - models: `fashionstar` (runtime string; currently ignored)
+  - models: `fashionstar` (CAN), `uart` (native UART/RS-485)
   - modes: `scan`, `ping`, `status`, `enable`, `disable`, `stop`, `pos-vel`, `zero`, parameter read/write; ID changes use `--set-motor-id`
   - note: configuration requires a power cycle; VEL, MIT/quantitative torque and FORCE_POS are currently unsupported
 
@@ -313,7 +313,7 @@ flowchart TB
 - [`motor_vendors/robstride_cia402`](motor_vendors/robstride_cia402): RobStride CANopen/CiA402 over classic CAN
 - [`motor_vendors/robstride_mit`](motor_vendors/robstride_mit): RobStride F_CMD=2 MIT protocol over classic CAN standard frames
 - [`motor_vendors/myactuator`](motor_vendors/myactuator): MyActuator CAN protocol implementation
-- [`motor_vendors/fashionstar`](motor_vendors/fashionstar): FashionStar classic CAN adapter
+- [`motor_vendors/fashionstar`](motor_vendors/fashionstar): FashionStar CAN and UART/RS-485 adapter
 - [`motor_cli`](motor_cli): unified Rust CLI
   - full parameters (English): [`motor_cli/README.md`](motor_cli/README.md)
   - full parameters (Chinese): [`motor_cli/README.zh-CN.md`](motor_cli/README.zh-CN.md)

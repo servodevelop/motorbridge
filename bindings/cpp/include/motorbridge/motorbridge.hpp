@@ -443,6 +443,15 @@ class Controller {
     return Controller(raw);
   }
 
+  static Controller from_uart(const std::string& serial_port = "/dev/ttyUSB0",
+                              uint32_t baud = 115200) {
+    MotorController* raw = motor_controller_new_uart(serial_port.c_str(), baud);
+    if (!raw) {
+      throw Error("new_uart failed: " + last_error_message());
+    }
+    return Controller(raw);
+  }
+
   Controller(Controller&&) noexcept = default;
   Controller& operator=(Controller&&) noexcept = default;
   Controller(const Controller&) = delete;

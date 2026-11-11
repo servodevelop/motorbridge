@@ -14,3 +14,4 @@ path = "src/lib.rs"
 
 [dependencies]
 motor_core = { path = "../../motor_core" }
+serialport = { version = "4.6", default-features = false }

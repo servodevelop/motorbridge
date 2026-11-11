@@ -329,7 +329,7 @@ impl SessionCtx {
                 Ok(json!({
                     "vendor": "fashionstar",
                     "has_value": true,
-                    "motor_id": motor.motor_id,
+                    "motor_id": motor.motor_id(),
                     "feedback_id": motor_vendor_fashionstar::CAN_ID,
                     "model": self.target.model,
                     "arbitration_id": snapshot.state.arbitration_id,
@@ -518,7 +518,7 @@ impl SessionCtx {
 
         Ok(json!({
             "vendor": "fashionstar",
-            "motor_id": motor.motor_id,
+            "motor_id": motor.motor_id(),
             "feedback_id": motor_vendor_fashionstar::CAN_ID,
             "model": self.target.model,
             "values": values,

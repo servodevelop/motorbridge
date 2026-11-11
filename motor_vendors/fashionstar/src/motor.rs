@@ -1,6 +1,7 @@
 use crate::protocol::{self, Reply, CAN_ID};
 use crate::registers;
-use motor_core::bus::{CanBus, CanFrame};
+use crate::uart::UartMotor;
+use motor_core::bus::{CanBus, CanFrame, UartFrame};
 use motor_core::device::MotorDevice;
 use motor_core::error::{MotorError, Result};
 use motor_core::feedback::{FeedbackCache, FeedbackSnapshot};
@@ -25,7 +26,7 @@ struct Pending {
     reply: Option<Reply>,
 }
 
-pub struct FashionstarMotor {
+struct CanMotor {
     pub motor_id: u16,
     bus: Arc<dyn CanBus>,
     transactions: Mutex<Option<(i32, Instant)>>,
@@ -35,13 +36,13 @@ pub struct FashionstarMotor {
     state_valid: AtomicBool,
 }
 
-impl FashionstarMotor {
-    pub fn new(
-        motor_id: u16,
-        feedback_id: u16,
-        _model: &str,
-        bus: Arc<dyn CanBus>,
-    ) -> Result<Self> {
+impl CanMotor {
+    pub fn new(motor_id: u16, feedback_id: u16, model: &str, bus: Arc<dyn CanBus>) -> Result<Self> {
+        if model == "uart" {
+            return Err(MotorError::InvalidArgument(
+                "model=uart requires a native UART controller".to_string(),
+            ));
+        }
         if motor_id > 254 {
             return Err(MotorError::InvalidArgument(
                 "FashionStar ServoID must be 0..254".to_string(),
@@ -271,7 +272,7 @@ impl FashionstarMotor {
     }
 }
 
-impl MotorDevice for FashionstarMotor {
+impl MotorDevice for CanMotor {
     fn vendor(&self) -> &'static str {
         "fashionstar"
     }
@@ -289,11 +290,11 @@ impl MotorDevice for FashionstarMotor {
     }
 
     fn enable(&self) -> Result<()> {
-        FashionstarMotor::enable(self)
+        CanMotor::enable(self)
     }
 
     fn disable(&self) -> Result<()> {
-        FashionstarMotor::disable(self)
+        CanMotor::disable(self)
     }
 
     fn accepts_frame(&self, frame: &CanFrame) -> bool {
@@ -316,5 +317,226 @@ impl MotorDevice for FashionstarMotor {
             }
         }
         Ok(())
+    }
+}
+
+enum MotorInner {
+    Can(CanMotor),
+    Uart(UartMotor),
+}
+
+pub struct FashionstarMotor {
+    inner: MotorInner,
+}
+
+impl FashionstarMotor {
+    pub fn new(motor_id: u16, feedback_id: u16, model: &str, bus: Arc<dyn CanBus>) -> Result<Self> {
+        Ok(Self {
+            inner: MotorInner::Can(CanMotor::new(motor_id, feedback_id, model, bus)?),
+        })
+    }
+
+    pub(crate) fn new_uart(
+        motor_id: u16,
+        feedback_id: u16,
+        model: &str,
+        bus: Arc<dyn CanBus<UartFrame>>,
+        transactions: Arc<Mutex<()>>,
+    ) -> Result<Self> {
+        Ok(Self {
+            inner: MotorInner::Uart(UartMotor::new(
+                motor_id,
+                feedback_id,
+                model,
+                bus,
+                transactions,
+            )?),
+        })
+    }
+
+    pub fn vendor(&self) -> &'static str {
+        "fashionstar"
+    }
+
+    pub fn motor_id(&self) -> u16 {
+        match &self.inner {
+            MotorInner::Can(m) => m.motor_id(),
+            MotorInner::Uart(m) => m.motor_id(),
+        }
+    }
+
+    pub fn model(&self) -> &str {
+        match &self.inner {
+            MotorInner::Can(m) => m.model(),
+            MotorInner::Uart(m) => m.model(),
+        }
+    }
+
+    pub fn feedback_id(&self) -> u16 {
+        match &self.inner {
+            MotorInner::Can(m) => m.feedback_id(),
+            MotorInner::Uart(m) => m.feedback_id(),
+        }
+    }
+
+    pub fn get_register_u32(&self, rid: u8, timeout: Duration) -> Result<u32> {
+        match &self.inner {
+            MotorInner::Can(m) => m.get_register_u32(rid, timeout),
+            MotorInner::Uart(m) => m.get_register_u32(rid, timeout),
+        }
+    }
+
+    pub fn write_register_u32(&self, rid: u8, value: u32) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.write_register_u32(rid, value),
+            MotorInner::Uart(m) => m.write_register_u32(rid, value),
+        }
+    }
+
+    pub fn send_cmd_pos_vel(&self, target_position: f32, velocity_limit: f32) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.send_cmd_pos_vel(target_position, velocity_limit),
+            MotorInner::Uart(m) => m.send_cmd_pos_vel(target_position, velocity_limit),
+        }
+    }
+
+    pub fn ensure_control_mode(&self, mode: u32, timeout: Duration) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.ensure_control_mode(mode, timeout),
+            MotorInner::Uart(m) => m.ensure_control_mode(mode, timeout),
+        }
+    }
+
+    pub fn enable(&self) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.enable(),
+            MotorInner::Uart(m) => m.enable(),
+        }
+    }
+
+    pub fn disable(&self) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.disable(),
+            MotorInner::Uart(m) => m.disable(),
+        }
+    }
+
+    pub fn stop(&self) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.stop(),
+            MotorInner::Uart(m) => m.stop(),
+        }
+    }
+
+    pub fn set_zero_position(&self) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.set_zero_position(),
+            MotorInner::Uart(m) => m.set_zero_position(),
+        }
+    }
+
+    pub fn request_motor_feedback(&self, timeout: Duration) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.request_motor_feedback(timeout),
+            MotorInner::Uart(m) => m.request_motor_feedback(timeout),
+        }
+    }
+
+    pub fn latest_state_snapshot(&self) -> Option<FeedbackSnapshot<MotorFeedbackState>> {
+        match &self.inner {
+            MotorInner::Can(m) => m.latest_state_snapshot(),
+            MotorInner::Uart(m) => m.latest_state_snapshot(),
+        }
+    }
+
+    pub fn latest_state(&self) -> Option<MotorFeedbackState> {
+        match &self.inner {
+            MotorInner::Can(m) => m.latest_state(),
+            MotorInner::Uart(m) => m.latest_state(),
+        }
+    }
+}
+
+impl MotorDevice<CanFrame> for FashionstarMotor {
+    fn vendor(&self) -> &'static str {
+        "fashionstar"
+    }
+
+    fn model(&self) -> &str {
+        FashionstarMotor::model(self)
+    }
+
+    fn motor_id(&self) -> u16 {
+        FashionstarMotor::motor_id(self)
+    }
+
+    fn feedback_id(&self) -> u16 {
+        FashionstarMotor::feedback_id(self)
+    }
+
+    fn enable(&self) -> Result<()> {
+        FashionstarMotor::enable(self)
+    }
+
+    fn disable(&self) -> Result<()> {
+        FashionstarMotor::disable(self)
+    }
+
+    fn accepts_frame(&self, frame: &CanFrame) -> bool {
+        match &self.inner {
+            MotorInner::Can(m) => m.accepts_frame(frame),
+            _ => false,
+        }
+    }
+
+    fn process_feedback_frame(&self, frame: CanFrame) -> Result<()> {
+        match &self.inner {
+            MotorInner::Can(m) => m.process_feedback_frame(frame),
+            _ => Err(MotorError::Protocol(
+                "FashionStar frame type does not match model".to_string(),
+            )),
+        }
+    }
+}
+
+impl MotorDevice<UartFrame> for FashionstarMotor {
+    fn vendor(&self) -> &'static str {
+        "fashionstar"
+    }
+
+    fn model(&self) -> &str {
+        FashionstarMotor::model(self)
+    }
+
+    fn motor_id(&self) -> u16 {
+        FashionstarMotor::motor_id(self)
+    }
+
+    fn feedback_id(&self) -> u16 {
+        FashionstarMotor::feedback_id(self)
+    }
+
+    fn enable(&self) -> Result<()> {
+        FashionstarMotor::enable(self)
+    }
+
+    fn disable(&self) -> Result<()> {
+        FashionstarMotor::disable(self)
+    }
+
+    fn accepts_frame(&self, frame: &UartFrame) -> bool {
+        match &self.inner {
+            MotorInner::Uart(m) => m.accepts_frame(frame),
+            _ => false,
+        }
+    }
+
+    fn process_feedback_frame(&self, frame: UartFrame) -> Result<()> {
+        match &self.inner {
+            MotorInner::Uart(m) => m.process_feedback_frame(frame),
+            _ => Err(MotorError::Protocol(
+                "FashionStar frame type does not match model".to_string(),
+            )),
+        }
     }
 }

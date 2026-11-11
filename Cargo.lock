@@ -311,6 +311,7 @@ name = "motor_vendor_fashionstar"
 version = "0.5.6"
 dependencies = [
  "motor_core",
+ "serialport",
 ]
 
 [[package]]

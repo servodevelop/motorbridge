@@ -134,7 +134,8 @@ Recommended: client calls `{"op":"capabilities"}` on connect and adapts UI/flows
         "ops_vendor_native": ["read", "pos_classic", "read_register", "dq_voltage", "dq_current", "brake", "run_mode", "write_register", "periodic_report", "set_zero_position", "store_parameters"]
       },
       "fashionstar": {
-        "transports": ["auto", "socketcan", "mcu-serial"],
+        "transports": ["auto", "socketcan", "mcu-serial", "uart"],
+        "models": ["fashionstar", "uart"],
         "modes": ["pos_vel"],
         "ops_unified": ["scan", "set_id", "enable", "disable", "stop", "state_once", "status", "verify"],
         "ops_vendor_native": ["get_register_u32", "write_register_u32"]

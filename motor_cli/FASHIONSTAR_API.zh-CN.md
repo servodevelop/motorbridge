@@ -1,12 +1,12 @@
-# FashionStar CAN API 与模式参考
+# FashionStar CAN / UART API 与模式参考
 
 > English: [FASHIONSTAR_API.md](FASHIONSTAR_API.md)
 
-本文介绍 motorbridge 的 FashionStar CAN 控制接口。
+本文介绍 motorbridge 的 FashionStar CAN 与 UART/RS-485 控制接口。
 
 ## 1）基础信息
 
-- 厂商标识：`fashionstar`。型号参数默认 `fashionstar`，当前实现忽略该参数，不区分型号。
+- 厂商标识：`fashionstar`。默认型号 `fashionstar` 使用 CAN，型号 `uart` 使用原生 UART/RS-485。以下 CAN 设置适用于默认型号。
 - 经典 CAN，收发均使用标准 11-bit 仲裁 ID **0x321**。`motor_id` 是数据区的 ServoID，范围 **0..254**；不接受 255 作为单电机 ID。
 - `feedback_id` 固定为 `0x321`（801），与 ServoID 无关。
 - 链路：`auto`、`socketcan`、`mcu-serial`。MCU 固件必须使用 motorbridge 已有串口协议，不能直接使用官方网页工具的 UC-06 串口封装。
@@ -68,8 +68,26 @@ u32 寄存器接口在低字地址 `0x03`、`0x15`、`0x50`、`0x53` 自动组�
 
 Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONSTAR_API.zh-CN.md)。WS 复用已有 `set_target`、`pos_vel`、`state_once`、`get_register_u32`、`write_register_u32`、`scan`、`set_id`、`verify`；`set_id` 返回 `verified:false`、`requires_power_cycle:true`。默认 `param_stream` 读取电压（`0x10`）、电流（`0x11`）、功率（`0x12`）、温度（`0x13`）、状态（`0x14`）、多圈位置（`0x15/0x16`）、圈数（`0x17`）和单圈角度（`0x18`），均返回寄存器原始值。
 
-## 6）协议来源
+## 6）原生 UART/RS-485
+
+使用 `--vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200`。波特率需匹配舵机配置；UART 工厂方法默认 115200，CLI 串口参数保留原有默认值。链路为 8-N-1、无流控，适配器需自动处理半双工收发方向。
+
+`motor_id` 仍为 ServoID，范围 0..254。`feedback_id=0x321` 仅作为接口占位值；UART 没有 CAN 仲裁 ID 或独立反馈地址。扫描、改 ID、控制、状态读取和参数流均沿用现有操作。
+
+参数接口保留 FashionStar 现有编号，由驱动内部转换：型号 `0x01`、固件 `0x02`、序号 `0x03/0x04`、状态 `0x10..0x18`、配置 `0x80..0x89`、`0x8B`、`0x8C`、`0x8E..0x93`。这些是 motorbridge 参数编号，不是 UART 原生地址；例如 `0x81` 映射到 UART 的 ID 参数 34。`0x82` 波特率索引使用 UART 的 1..8（9600、19200、38400、57600、115200、250000、500000、1000000）。没有对应 UART 功能的 CAN 参数返回不支持。配置修改需要重新上电。
+
+位置控制使用 UART `0x0F` 指令，携带速度上限，加减速时间为 0，功率 0 表示使用配置上限。停止和使能保持当前位置，卸力关闭输出，置零将当前位置设为原点。反馈提供位置、状态、电流 A 和温度 °C；速度按连续采样估算。VEL、MIT、定量力矩和 FORCE_POS 暂不支持。
+
+```bash
+motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode status
+```
+
+WS 使用相同操作和参数编号。设置 `model:"uart"`、`transport:"uart"`、`serial_port` 和 `serial_baud:115200`；`feedback_id` 使用 801 或省略。
+
+## 7）协议来源
 
 - [官方 CAN 协议](https://fashionstar.com.cn/wiki/protocols/servo/can-bus/)（[English](https://fashionstar.com.hk/wiki/protocols/servo/can-bus/)）
 - [官方各语言 SDK](https://fashionstar.com.cn/wiki/sdk/servo/)
 - [官方 CAN 网页配置工具](https://fashionstar.com.cn/wiki/software/servo/canbus-web-config-tool/)
+- [官方 UART/RS-485 协议](https://fashionstar.com.cn/wiki/protocols/servo/uart-rs485/)
+- [官方 UART 网页控制器](https://fashionstar.com.cn/wiki/software/servo/data/web-controller/)

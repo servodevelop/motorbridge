@@ -107,7 +107,8 @@ fn handle_capabilities(ctx: &SessionCtx) -> Result<Value, String> {
                 ],
             },
             "fashionstar": {
-                "transports": ["auto", "socketcan", "mcu-serial"],
+                "transports": ["auto", "socketcan", "mcu-serial", "uart"],
+                "models": ["fashionstar", "uart"],
                 "modes": ["pos_vel"],
                 "ops_unified": ["scan", "set_id", "enable", "disable", "stop", "state_once", "status", "verify"],
                 "ops_vendor_native": ["get_register_u32", "write_register_u32"]

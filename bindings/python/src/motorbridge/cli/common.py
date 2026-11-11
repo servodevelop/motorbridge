@@ -32,11 +32,11 @@ def _add_common_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--transport",
         default="auto",
-        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial"],
+        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart"],
         help="transport backend; dm-serial/dm-device are Damiao-only; mcu-serial is a vendor-agnostic UART-to-CAN MCU bridge (classic CAN only)",
     )
-    p.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for dm-serial")
-    p.add_argument("--serial-baud", type=int, default=921600, help="baud rate for dm-serial")
+    p.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for serial transports")
+    p.add_argument("--serial-baud", type=int, default=921600, help="baud rate for serial transports")
     p.add_argument(
         "--dm-device-type",
         default="usb2canfd-dual",
@@ -165,6 +165,8 @@ def _add_motor(ctrl: Controller, vendor: str, motor_id: int, feedback_id: int, m
 
 def _open_controller(args: argparse.Namespace, vendor: str) -> Controller:
     transport = getattr(args, "transport", "auto")
+    if transport == "uart":
+        return Controller.from_uart(args.serial_port, int(args.serial_baud))
     if vendor == "fashionstar" and transport not in ("auto", "socketcan", "mcu-serial"):
         raise ValueError("FashionStar supports classic CAN: auto|socketcan|mcu-serial")
     if transport == "dm-serial":

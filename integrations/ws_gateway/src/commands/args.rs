@@ -45,10 +45,10 @@ Examples:\n\
 \n\
 Optional defaults (only used when WS message omits target fields):\n\
   --vendor damiao|robstride|hexfellow|myactuator|hightorque|fashionstar\n\
-  --transport auto|socketcan|socketcanfd|dm-serial|dm-device\n\
+  --transport auto|socketcan|socketcanfd|dm-serial|dm-device|uart\n\
   --channel can0                SocketCAN/CAN-FD interface, for example can0/can1\n\
-  --serial-port /dev/ttyACM0    used only by --transport dm-serial\n\
-  --serial-baud 921600          used only by --transport dm-serial\n\
+  --serial-port /dev/ttyACM0    used by serial transports\n\
+  --serial-baud 921600          used by serial transports\n\
   --dm-device-type usb2canfd-dual  used only by --transport dm-device\n\
   --dm-channel 0                dm-device SDK channel number; scan JSON omitted dm_channel scans all adapter channels\n\
   --model auto                  default model hint when WS message omits model\n\

@@ -209,7 +209,7 @@ Vendors:\n\
   --vendor robstride_cia402 (RobStride CANopen/CiA402 over classic CAN; experimental/incomplete)\n\
   --vendor robstride_mit (RobStride F_CMD=2 MIT protocol over classic CAN standard frames; experimental/incomplete)\n\
   --vendor myactuator\n\
-  --vendor fashionstar (classic CAN, fixed CAN ID 0x321)\n\
+  --vendor fashionstar (CAN model fashionstar, native UART/RS-485 model uart)\n\
   --vendor all       scan all vendors\n\n\
 Damiao modes:\n\
   --mode scan | enable | disable | mit | pos-vel | vel | force-pos | read-param | write-param\n\n\
@@ -231,10 +231,10 @@ FashionStar modes:\n\
   --mode scan | ping | enable | disable | stop | status | pos-vel | zero | read-param | write-param\n\
   Configuration changes require a power cycle; continuous velocity and quantitative torque control are currently unsupported.\n\n\
 Common args:\n\
-  --transport   auto|socketcan|socketcanfd|mcu-serial|dm-serial|dm-device (default auto; dm-serial/dm-device are Damiao-only, mcu-serial is classic-CAN-only)\n\
+  --transport   auto|socketcan|socketcanfd|mcu-serial|dm-serial|dm-device|uart (default auto; dm-serial/dm-device are Damiao-only, mcu-serial is classic-CAN-only)\n\
   --channel      default can0\n\
-  --serial-port  default /dev/ttyACM0 (used when --transport mcu-serial or dm-serial)\n\
-  --serial-baud  default 921600 (used when --transport mcu-serial or dm-serial)\n\
+  --serial-port  default /dev/ttyACM0 (used by serial transports)\n\
+  --serial-baud  default 921600 (used by serial transports)\n\
   --dm-device-type  usb2canfd|usb2canfd-dual|linkx4c, default usb2canfd-dual (used when --transport dm-device)\n\
   --dm-channel      SDK channel number: usb2canfd=0, usb2canfd-dual=0|1, linkx4c=0|1|2|3 (control default 0; scan omitted scans all)\n\
   --model        default depends on vendor (damiao=4340, robstride=rs-00, robstride_cia402=rs-00, robstride_mit=rs-00, hightorque=hightorque[hint only], myactuator=X8, fashionstar=fashionstar)\n\

@@ -1,12 +1,12 @@
-# FashionStar CAN API and Mode Reference
+# FashionStar API and Mode Reference
 
 > 中文：[FASHIONSTAR_API.zh-CN.md](FASHIONSTAR_API.zh-CN.md)
 
-Practical reference for FashionStar CAN control in motorbridge.
+Practical reference for FashionStar CAN and UART/RS-485 control in motorbridge.
 
 ## 1) Basics
 
-- Vendor: `fashionstar`. The model token defaults to `fashionstar` and is ignored by this adapter.
+- Vendor: `fashionstar`. Model `fashionstar` selects CAN; model `uart` selects native UART/RS-485. The following CAN settings apply to the default model.
 - Classic CAN, standard 11-bit arbitration ID **0x321** for both directions. `motor_id` is the ServoID in the payload, **0..254**; 255 is not accepted as an individual motor.
 - `feedback_id` is fixed at `0x321` (801), independent of ServoID.
 - Transports: `auto`, `socketcan`, `mcu-serial`. The MCU firmware must implement motorbridge's existing serial protocol. The official UC-06 web tool uses a different serial wrapper.
@@ -68,8 +68,26 @@ Unified state contains position, status, estimated velocity (`vel`, rad/s), curr
 
 Python SDK/CLI examples: [FASHIONSTAR_API.md](../bindings/python/FASHIONSTAR_API.md). WS uses existing `set_target`, `pos_vel`, `state_once`, `get_register_u32`, `write_register_u32`, `scan`, `set_id`, `verify`; `set_id` returns `verified:false` and `requires_power_cycle:true`. The default `param_stream` reads voltage (`0x10`), current (`0x11`), power (`0x12`), temperature (`0x13`), status (`0x14`), multi-turn position (`0x15/0x16`), turn count (`0x17`) and single-turn angle (`0x18`) as raw register values.
 
-## 6) Protocol References
+## 6) Native UART/RS-485
+
+Use `--model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200` with `--vendor fashionstar`. Select the baud rate configured on the servo; the UART factory default is 115200, while CLI serial options retain their existing defaults. The link uses 8-N-1 without flow control and an adapter that handles half-duplex direction.
+
+`motor_id` remains ServoID 0..254. Keep `feedback_id=0x321` as an interface placeholder; UART has no CAN arbitration ID or separate feedback address. Existing scan, ID update, control, state and parameter-stream operations apply.
+
+Parameter APIs retain the existing FashionStar IDs, translated inside the driver: model `0x01`, firmware `0x02`, serial `0x03/0x04`, state `0x10..0x18`, configuration `0x80..0x89`, `0x8B`, `0x8C`, `0x8E..0x93`. These are motorbridge parameter IDs, not native UART addresses. For example, `0x81` maps to UART ID parameter 34. The baud index at `0x82` uses UART values 1..8 (9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000). Unsupported CAN-only parameters return errors. Configuration requires a power cycle.
+
+Position control uses UART command `0x0F` with a speed limit, no acceleration/deceleration ramp and power 0 (configured limit). Stop/enable hold position; disable releases output; zero sets the current position as the origin. Feedback provides position, status, current in A and temperature in °C; velocity is estimated from consecutive samples. VEL, MIT, quantitative torque and FORCE_POS remain unsupported.
+
+```bash
+motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode status
+```
+
+WS uses the same operations and parameter IDs. Set `model:"uart"`, `transport:"uart"`, `serial_port` and `serial_baud:115200`; keep `feedback_id:801` or omit it.
+
+## 7) Protocol References
 
 - [Official CAN protocol](https://fashionstar.com.hk/wiki/protocols/servo/can-bus/) ([中文](https://fashionstar.com.cn/wiki/protocols/servo/can-bus/))
 - [Official SDKs](https://fashionstar.com.cn/wiki/sdk/servo/)
 - [Official CAN web configuration tool](https://fashionstar.com.cn/wiki/software/servo/canbus-web-config-tool/)
+- [Official UART/RS-485 protocol](https://fashionstar.com.cn/wiki/protocols/servo/uart-rs485/)
+- [Official UART web controller](https://fashionstar.com.cn/wiki/software/servo/data/web-controller/)
