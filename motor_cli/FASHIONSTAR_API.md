@@ -59,7 +59,7 @@ motor_cli --vendor fashionstar --channel can0 --motor-id 2 --mode ping
 
 ## 5) Registers, State and Configuration
 
-The adapter sends position mode `0x52=2`, signed target `0x53/0x54`, speed limit `0x58`, acceleration/deceleration `0x56/0x57=20` ms, then execute `0x59=1`. Target position uses signed 32-bit units of 0.1°. The 20 ms ramps follow the official tool defaults. Configured power is preserved.
+The adapter reads the servo's current acceleration time `0x56` and deceleration time `0x57`. For each value below 20 ms, it sends 20 ms as a runtime motion parameter; values of 20 ms or above are left unchanged. It then sends position mode `0x52=2`, signed target `0x53/0x54`, speed limit `0x58`, and execute `0x59=1`. Target position uses signed 32-bit units of 0.1°. Configured power is preserved. Read or change the ramp times in milliseconds through the existing u32 register interface before sending a position command.
 
 The existing u32 register interface combines low/high registers for addresses `0x03`, `0x15`, `0x50`, `0x53`; other supported addresses carry 16-bit raw values. Signed values use the two's-complement representation of their register width. Address permissions and documented value ranges are checked before transmission. PID registers `0xC8..0xD5` are automatically unlocked, accessed and relocked; unlock settling takes 400 ms before waiting for a reply.
 

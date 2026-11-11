@@ -189,7 +189,7 @@ mod tests {
             motor.send_cmd_pos_vel(1.0, 1.0).unwrap();
             assert_eq!(motor.feedback_id(), CAN_ID);
             let sent = bus.sent.lock().unwrap();
-            assert_eq!(sent.len(), 6);
+            assert_eq!(sent.len(), 8);
             assert!(sent
                 .iter()
                 .all(|frame| { frame.arbitration_id == u32::from(CAN_ID) && frame.data[1] == 0 }));
@@ -219,16 +219,18 @@ mod tests {
             .send_cmd_pos_vel(-std::f32::consts::PI, std::f32::consts::PI)
             .unwrap();
         let sent = bus.sent.lock().unwrap();
-        assert_eq!(sent.len(), 6);
+        assert_eq!(sent.len(), 8);
         assert!(sent
             .iter()
             .all(|frame| frame.arbitration_id == u32::from(CAN_ID)));
-        assert_eq!(&sent[0].data[..5], &[b'w', 0, 0x52, 2, 0]);
-        assert_eq!(sent[1].data, [b'W', 0, 0x53, 0xf8, 0xf8, 0x54, 0xff, 0xff]);
-        assert_eq!(&sent[2].data[..5], &[b'w', 0, 0x58, 8, 7]);
-        assert_eq!(&sent[3].data[..5], &[b'w', 0, 0x56, 20, 0]);
-        assert_eq!(&sent[4].data[..5], &[b'w', 0, 0x57, 20, 0]);
-        assert_eq!(&sent[5].data[..5], &[b'w', 0, 0x59, 1, 0]);
+        assert_eq!(&sent[0].data[..3], &[b'r', 0, 0x56]);
+        assert_eq!(&sent[1].data[..5], &[b'w', 0, 0x56, 20, 0]);
+        assert_eq!(&sent[2].data[..3], &[b'r', 0, 0x57]);
+        assert_eq!(&sent[3].data[..5], &[b'w', 0, 0x57, 20, 0]);
+        assert_eq!(&sent[4].data[..5], &[b'w', 0, 0x52, 2, 0]);
+        assert_eq!(sent[5].data, [b'W', 0, 0x53, 0xf8, 0xf8, 0x54, 0xff, 0xff]);
+        assert_eq!(&sent[6].data[..5], &[b'w', 0, 0x58, 8, 7]);
+        assert_eq!(&sent[7].data[..5], &[b'w', 0, 0x59, 1, 0]);
         drop(sent);
         motor
             .request_motor_feedback(Duration::from_secs(1))

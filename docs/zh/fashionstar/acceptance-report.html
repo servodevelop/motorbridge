@@ -272,7 +272,7 @@
           <tbody>
             <tr><th scope="row">扫描与连通识别</th><td>遍历 ServoID，读取型号寄存器 <code>0x01</code>；提供 <code>scan</code>、<code>ping</code> 和 WS <code>verify</code>。</td><td>沿用同一操作流程，驱动将型号查询转换为原生 <code>0x03</code> 命令、参数地址 6。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">设备信息读取</th><td>读取型号、固件版本及序号；序号低/高字自动组合为 32 位值。</td><td>读取原生参数 6、7、8，并映射至相同的公共参数编号。</td><td><span class="ok">两条路径已实现</span></td></tr>
-            <tr><th scope="row">多圈位置控制</th><td><code>POS_VEL</code> 映射到原生模式 2，依次写入模式、目标角度、速度上限、20 ms 加减速时间及执行寄存器。</td><td><code>POS_VEL</code> 映射到原生 <code>0x0F</code> 命令，一次发送目标角度和速度上限。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">多圈位置控制</th><td><code>POS_VEL</code> 映射到原生模式 2，发送模式、目标角度、速度上限及执行指令；加减速时间先读取当前值，小于 20 ms 时补发 20 ms，达到 20 ms 时沿用舵机内部值。</td><td><code>POS_VEL</code> 映射到原生 <code>0x0F</code> 命令，一次发送目标角度和速度上限。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">行程与速度上限</th><td>绝对目标范围 ±1024 圈；角度与速度原始分辨率分别为 0.1°、0.1°/s。</td><td>使用相同的目标范围、单位和数值校验规则；长行程旋转通过设置远距离目标完成。</td><td><span class="ok">统一参数语义</span></td></tr>
             <tr><th scope="row">使能与停止保持</th><td><code>enable</code>、<code>stop</code> 写入 <code>0x7B=0x11</code>，保持当前位置。</td><td>发送 <code>0x18</code>，模式 <code>0x11</code>，保持当前位置。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">卸力</th><td><code>disable</code> 写入 <code>0x7B=0x10</code>，释放输出。</td><td>发送 <code>0x18</code>，模式 <code>0x10</code>，释放输出。</td><td><span class="ok">两条路径已实现</span></td></tr>

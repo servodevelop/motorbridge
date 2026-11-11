@@ -181,16 +181,19 @@ impl CanMotor {
     }
 
     /// POS_VEL maps to speed-based position mode (native mode 2).
-    /// Use the official tool's 20 ms acceleration/deceleration, preserving power.
+    /// Preserve power and use the servo's ramp times, with a minimum of 20 ms.
     pub fn send_cmd_pos_vel(&self, target_position: f32, velocity_limit: f32) -> Result<()> {
         let target = protocol::angle_raw(target_position)?;
         let speed = protocol::speed_raw(velocity_limit)?;
         let _guard = self.lock()?;
+        for address in [0x56, 0x57] {
+            if self.read(address, Duration::from_millis(500))? < 20 {
+                self.write(address, 20)?;
+            }
+        }
         self.write(0x52, 2)?;
         self.write(0x53, target)?;
         self.write(0x58, u32::from(speed))?;
-        self.write(0x56, 20)?;
-        self.write(0x57, 20)?;
         self.write(0x59, 1)
     }
 
