@@ -8,12 +8,13 @@ use std::time::{Duration, Instant};
 struct Inner {
     port: Option<Box<dyn SerialPort>>,
     buffer: Vec<u8>,
-    last_tx: Option<Instant>,
+    last_tx: Option<(Instant, Duration)>,
 }
 
 /// FashionStar native UART/RS-485 framing. The adapter handles half-duplex direction.
 pub struct FashionstarUartBus {
     inner: Mutex<Inner>,
+    baud: u32,
 }
 
 impl FashionstarUartBus {
@@ -32,6 +33,7 @@ impl FashionstarUartBus {
             .open()
             .map_err(|e| MotorError::Io(format!("open FashionStar UART port failed: {e}")))?;
         Ok(Self {
+            baud,
             inner: Mutex::new(Inner {
                 port: Some(port),
                 buffer: Vec::new(),
@@ -112,8 +114,8 @@ impl CanBus<UartFrame> for FashionstarUartBus {
             .lock()
             .map_err(|_| MotorError::Io("UART lock poisoned".to_string()))?;
         // Protocol recommends 5–10 ms between commands, including optional ACKs.
-        if let Some(last) = inner.last_tx {
-            std::thread::sleep(Duration::from_millis(10).saturating_sub(last.elapsed()));
+        if let Some((last, gap)) = inner.last_tx {
+            std::thread::sleep(gap.saturating_sub(last.elapsed()));
         }
         let port = inner
             .port
@@ -123,7 +125,11 @@ impl CanBus<UartFrame> for FashionstarUartBus {
             .map_err(|e| MotorError::Io(format!("UART write failed: {e}")))?;
         port.flush()
             .map_err(|e| MotorError::Io(format!("UART flush failed: {e}")))?;
-        inner.last_tx = Some(Instant::now());
+        // USB flush can finish before wire transmission; allow the request, ACK and turnaround.
+        let wire_time =
+            Duration::from_secs_f64((packet.len() + 8) as f64 * 10.0 / f64::from(self.baud));
+        let gap = Duration::from_millis(5).max(wire_time + Duration::from_millis(3));
+        inner.last_tx = Some((Instant::now(), gap));
         Ok(())
     }
 

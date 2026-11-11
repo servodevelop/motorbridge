@@ -247,7 +247,7 @@ ID change support by vendor:\n\
   Damiao: supported (`--set-motor-id` and optional `--set-feedback-id`)\n\
   RobStride: supported (`--set-motor-id`)\n\
   HighTorque / Hexfellow / MyActuator: not supported in unified CLI path\n\
-  FashionStar: supported (`--set-motor-id`); power-cycle required\n\n\
+  FashionStar: supported (`--set-motor-id`); CAN: power-cycle required; UART: immediate\n\n\
 Damiao extras:\n\
   --verify-model 1/0, default 1\n\
   --verify-timeout-ms  default 500\n\

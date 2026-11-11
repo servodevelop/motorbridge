@@ -28,10 +28,10 @@ finally:
 This cleanup closes the connection. The existing `with Controller(...)` also calls `shutdown()` on exit, releasing servo output. Position queried after `request_feedback()` may still be in transit; it does not confirm arrival.
 
 - `add_fashionstar_motor(motor_id, feedback_id, model)`: ServoID 0..254; `fashionstar` selects CAN and `uart` selects UART/RS-485.
-- Use existing `enable()`, `disable()`, `stop()`, `set_zero_position()`, `send_pos_vel(pos, vlim)`, `get_register_u32(rid, timeout_ms)`, `write_register_u32(rid, value)`.
+- Use existing `enable()` (stop and hold), `disable()`, `set_zero_position()`, `send_pos_vel(pos, vlim)`, `get_register_u32(rid, timeout_ms)`, `write_register_u32(rid, value)`.
 - `ensure_mode(Mode.POS_VEL)` is available. VEL, MIT/quantitative torque and FORCE_POS are currently unsupported; operations without a protocol mapping return errors.
 - `vel` is estimated from consecutive position samples; `torq` carries current in A (`0x11` in mA divided by 1000), following MyActuator's mapping; `t_mos` is servo temperature in °C using the official CAN tool's default conversion. The first velocity sample, invalid temperature readings and rotor temperature are `NaN`. `torq` does not represent torque in N·m.
-- Configuration requires a power cycle. After writing `0x81`, power-cycle, create a connection with the new ID, then verify; the live handle retains its old ID.
+- CAN configuration requires a power cycle. UART ID and baud changes take effect immediately and persist across power cycles. After writing `0x81` or `0x82`, close the old connection and recreate it with the new settings; power-cycle CAN servos first. The live handle retains its old ID.
 
 ## Python CLI
 

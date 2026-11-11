@@ -2,7 +2,7 @@ use crate::commands::{
     as_bool, as_u16, as_u64, handle_robstride_read_param, handle_robstride_write_param,
     parse_damiao_mode, parse_robstride_mode,
 };
-use crate::model::{ControllerHandle, MotorHandle};
+use crate::model::{ControllerHandle, MotorHandle, Transport};
 use crate::session::SessionCtx;
 use crate::vendors::damiao_ws::ensure_control_mode_soft;
 use crate::vendors::fashionstar_ws::parse_fashionstar_u64;
@@ -364,7 +364,8 @@ fn handle_write_register_u32(v: &Value, ctx: &mut SessionCtx) -> Result<Value, S
                 "rid": rid,
                 "value": value,
                 "verified": false,
-                "requires_power_cycle": !matches!(rid, 0x28 | 0x50..=0x59 | 0x79..=0x7B | 0xFF)
+                "requires_power_cycle": ctx.target.transport != Transport::Uart
+                    && !matches!(rid, 0x28 | 0x50..=0x59 | 0x79..=0x7B | 0xFF)
             }))
         }
         Some(_) => Err("write_register_u32 is damiao-only".to_string()),

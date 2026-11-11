@@ -910,7 +910,7 @@ RobStride：
 | MyActuator | `set_current_position_as_zero()` |
 | Hexfellow | 不支持 |
 | HighTorque | `set_zero_position()`（0x40 置零帧，vendor 自动落盘） |
-| FashionStar | CAN：卸力，等待 50 ms 后设置当前位置为零；UART：`0x17` 设置当前位置为原点 |
+| FashionStar | CAN：卸力，等待 50 ms 后设置当前位置为零；UART：卸力，等待 20 ms 后通过 `0x17` 设置原点 |
 ```
 
 返回：
@@ -1684,7 +1684,7 @@ RobStride：
 | Hexfellow | 否 | 不支持 |
 | MyActuator | 否 | 不支持 |
 | HighTorque | 否 | 不支持 |
-| FashionStar | 是 | 写 `0x81`，重新上电后以新 ID 验证 |
+| FashionStar | 是 | 写 `0x81`；CAN 重新上电后验证，UART 立即生效并以新 ID 重连验证 |
 
 Damiao 参数：
 

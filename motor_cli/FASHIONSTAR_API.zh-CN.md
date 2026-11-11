@@ -64,9 +64,9 @@ u32 寄存器接口在低字地址 `0x03`、`0x15`、`0x50`、`0x53` 自动组�
 
 统一状态包含位置、状态码、估算速度（`vel`，rad/s）、电流（`torq`，A）和舵机温度（`t_mos`，℃）。速度是相邻完整位置采样之间的平均角速度；首次采样、查询失败或零点/圈数重置后的首次采样没有速度估算。电流寄存器 `0x11` 按官方 CAN SDK 和网页工具的 mA 单位除以 1000 换算为 A；与 MyActuator 一样，`torq` 表示电流，不表示 N·m 力矩。温度采用官方 CAN 工具默认 NTC 换算（B=3435、T0=298.15 K、ADC 满量程 4096），1..4095 之外的 ADC 值无效。单一舵机温度沿用项目其他单温度厂商的约定映射到 `t_mos`；`t_rotor` 仍无有效值。无效值在 C ABI/Python/C++ 中为 `NaN`，在 WS JSON 中为 `null`；完整位置/状态/温度/电流查询成功前没有有效快照。`stop` 停止锁力，`disable` 卸力。
 
-**配置修改需要重新上电后生效。** 写入成功表示请求已发送。修改 ID 寄存器 `0x81` 后，当前句柄仍使用旧 ID；重新上电后，以新 ID 重新创建控制器和舵机句柄再验证。波特率修改同样需重新上电，并同步主机波特率。运行时目标、执行、停止指令不需要重新上电。当前协议接入没有独立保存命令。
+**CAN 配置修改需要重新上电后生效。** 写入成功表示请求已发送。修改 ID 寄存器 `0x81` 后，当前句柄仍使用旧 ID；重新上电后，以新 ID 重新创建控制器和舵机句柄再验证。波特率修改同样需重新上电，并同步主机波特率。运行时目标、执行、停止指令不需要重新上电。当前协议接入没有独立保存命令。
 
-Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONSTAR_API.zh-CN.md)。WS 复用已有 `set_target`、`pos_vel`、`state_once`、`get_register_u32`、`write_register_u32`、`scan`、`set_id`、`verify`；`set_id` 返回 `verified:false`、`requires_power_cycle:true`。默认 `param_stream` 读取电压（`0x10`）、电流（`0x11`）、功率（`0x12`）、温度（`0x13`）、状态（`0x14`）、多圈位置（`0x15/0x16`）、圈数（`0x17`）和单圈角度（`0x18`），均返回寄存器原始值。
+Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONSTAR_API.zh-CN.md)。WS 复用已有 `set_target`、`pos_vel`、`state_once`、`get_register_u32`、`write_register_u32`、`scan`、`set_id`、`verify`；CAN `set_id` 返回 `verified:false`、`requires_power_cycle:true`。默认 `param_stream` 读取电压（`0x10`）、电流（`0x11`）、功率（`0x12`）、温度（`0x13`）、状态（`0x14`）、多圈位置（`0x15/0x16`）、圈数（`0x17`）和单圈角度（`0x18`），均返回寄存器原始值。
 
 ## 6）原生 UART/RS-485
 
@@ -74,9 +74,9 @@ Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONST
 
 `motor_id` 仍为 ServoID，范围 0..254。`feedback_id=0x321` 仅作为接口占位值；UART 没有 CAN 仲裁 ID 或独立反馈地址。扫描、改 ID、控制、状态读取和参数流均沿用现有操作。
 
-参数接口保留 FashionStar 现有编号，由驱动内部转换：型号 `0x01`、固件 `0x02`、序号 `0x03/0x04`、状态 `0x10..0x18`、配置 `0x80..0x89`、`0x8B`、`0x8C`、`0x8E..0x93`。这些是 motorbridge 参数编号，不是 UART 原生地址；例如 `0x81` 映射到 UART 的 ID 参数 34。`0x82` 波特率索引使用 UART 的 1..8（9600、19200、38400、57600、115200、250000、500000、1000000）。没有对应 UART 功能的 CAN 参数返回不支持。配置修改需要重新上电。
+参数接口保留 FashionStar 现有编号，由驱动内部转换：型号 `0x01`、固件 `0x02`、序号 `0x03/0x04`、状态 `0x10..0x18`、配置 `0x80..0x89`、`0x8B`、`0x8C`、`0x8E..0x93`。这些是 motorbridge 参数编号，不是 UART 原生地址；例如 `0x81` 映射到 UART 的 ID 参数 34。`0x82` 波特率索引使用 UART 的 1..8（9600、19200、38400、57600、115200、250000、500000、1000000）。没有对应 UART 功能的 CAN 参数返回不支持。UART 的 ID 和波特率修改立即生效并在断电后保留；需关闭旧连接，按新配置重新创建连接，当前句柄不会自动切换。UART `set_id` 返回 `verified:false`、`requires_power_cycle:false`，可用新 ID 调用 `verify` 确认结果。
 
-位置控制使用 UART `0x0F` 指令，携带速度上限，加减速时间为 0，功率 0 表示使用配置上限。停止和使能保持当前位置，卸力关闭输出，置零将当前位置设为原点。反馈提供位置、状态、电流 A 和温度 °C；速度按连续采样估算。VEL、MIT、定量力矩和 FORCE_POS 暂不支持。
+位置控制使用 UART `0x0F` 指令，携带速度上限，加速和减速时间均为协议下限 20 ms，功率 0 表示使用配置上限。停止和使能保持当前位置，卸力关闭输出，置零先卸力并等待 20 ms，再将当前位置设为原点。反馈提供位置、状态、电流 A 和温度 °C；速度按连续采样估算。VEL、MIT、定量力矩和 FORCE_POS 暂不支持。
 
 ```bash
 motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode status

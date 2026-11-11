@@ -135,7 +135,7 @@ DM_Device_SDK 是用于控制 CAN/CAN FD 设备的软件开发工具包。motorb
 - FashionStar:
   - 型号: `fashionstar`（CAN）、`uart`（原生 UART/RS-485）
   - 模式: `scan`, `ping`, `status`, `enable`, `disable`, `stop`, `pos-vel`, `zero`, 参数读写；改 ID 使用 `--set-motor-id`
-  - 说明: 配置修改重新上电后生效；连续速度、MIT/定量力矩、FORCE_POS 暂不支持
+  - 说明: CAN 配置修改重新上电后生效；UART 的 ID/波特率修改立即生效；连续速度、MIT/定量力矩、FORCE_POS 暂不支持
 
 ## 更新说明（2026-04）：Damiao / RobStride 能力收敛
 

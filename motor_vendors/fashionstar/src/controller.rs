@@ -4,7 +4,8 @@ use motor_core::bus::{open_can_bus, CanBus, UartFrame};
 use motor_core::controller::CoreController;
 use motor_core::error::Result;
 use motor_core::vendor_controller::VendorController;
-use std::sync::{Arc, Mutex};
+use parking_lot::FairMutex;
+use std::sync::Arc;
 
 pub struct FashionstarController {
     controller: ControllerInner,
@@ -14,7 +15,7 @@ enum ControllerInner {
     Can(VendorController<FashionstarMotor>),
     Uart {
         controller: VendorController<FashionstarMotor, UartFrame>,
-        transactions: Arc<Mutex<()>>,
+        transactions: Arc<FairMutex<()>>,
     },
 }
 
@@ -45,7 +46,7 @@ impl FashionstarController {
         Self {
             controller: ControllerInner::Uart {
                 controller: VendorController::new(bus),
-                transactions: Arc::new(Mutex::new(())),
+                transactions: Arc::new(FairMutex::new(())),
             },
         }
     }
@@ -124,6 +125,7 @@ mod tests {
     use crate::CAN_ID;
     use motor_core::CanFrame;
     use std::collections::VecDeque;
+    use std::sync::Mutex;
     use std::time::Duration;
 
     #[derive(Default)]

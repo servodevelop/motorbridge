@@ -5,6 +5,7 @@ use motor_core::bus::{CanBus, CanFrame, UartFrame};
 use motor_core::device::MotorDevice;
 use motor_core::error::{MotorError, Result};
 use motor_core::feedback::{FeedbackCache, FeedbackSnapshot};
+use parking_lot::FairMutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::time::{Duration, Instant};
@@ -341,7 +342,7 @@ impl FashionstarMotor {
         feedback_id: u16,
         model: &str,
         bus: Arc<dyn CanBus<UartFrame>>,
-        transactions: Arc<Mutex<()>>,
+        transactions: Arc<FairMutex<()>>,
     ) -> Result<Self> {
         Ok(Self {
             inner: MotorInner::Uart(UartMotor::new(

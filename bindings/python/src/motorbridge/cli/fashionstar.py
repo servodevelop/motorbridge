@@ -57,7 +57,7 @@ def _run_fashionstar(args: argparse.Namespace) -> None:
                 motor.write_register_u32(rid, value)
                 print(
                     f"command=run mode=write-param vendor=fashionstar param_id=0x{rid:X} "
-                    f"type=u32 value={value}; configuration changes take effect after a power cycle"
+                    f"type=u32 value={value}; CAN: power-cycle to apply; UART ID/baud: reconnect with the new settings"
                 )
                 return
             for i in range(args.loop):

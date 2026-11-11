@@ -127,7 +127,7 @@ pub fn run_fashionstar(
     let motor = controller.add_motor(motor_id, feedback_id, model)?;
     if let Some(new_motor_id) = set_motor_id {
         motor.write_register_u32(0x81, u32::from(new_motor_id))?;
-        println!("[id-set] FashionStar device id update requested: {motor_id} -> {new_motor_id}; power-cycle the servo before connecting with the new ID");
+        println!("[id-set] FashionStar device id update requested: {motor_id} -> {new_motor_id}; reconnect with the new ID (CAN: power-cycle first; UART: change is immediate)");
         controller.close_bus()?;
         return Ok(());
     }
@@ -167,7 +167,7 @@ pub fn run_fashionstar(
                         .map_err(|e| format!("invalid --param-value: {e}"))?
                 };
                 motor.write_register_u32(rid, value)?;
-                println!("param 0x{param_id:04X} (u32) = {value}; configuration changes take effect after a power cycle");
+                println!("param 0x{param_id:04X} (u32) = {value}; CAN: power-cycle to apply; UART ID/baud: reconnect with the new settings");
             }
             _ => return Err(format!("unknown FashionStar mode: {mode}").into()),
         }

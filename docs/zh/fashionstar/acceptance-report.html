@@ -160,15 +160,15 @@
         <div><dt>项目</dt><dd>motorbridge · FashionStar 供应商接入</dd></div>
         <div><dt>报告日期</dt><dd><time datetime="2026-11-11">2026 年 11 月 11 日</time></dd></div>
         <div><dt>比较基线</dt><dd><code>main</code> · <code>4741f28</code></dd></div>
-        <div><dt>交付版本</dt><dd><code>feat/fashionstar-unified</code> · <code>7e8e2c3</code></dd></div>
+        <div><dt>交付分支</dt><dd><code>feat/fashionstar-unified</code></dd></div>
         <div><dt>验收内容</dt><dd>协议驱动、统一接口、功能映射、软件验证与使用文档</dd></div>
-        <div><dt>版本状态</dt><dd>已提交并推送至远端同名分支</dd></div>
+        <div><dt>交付接口</dt><dd>Rust、C ABI、Python、C++、WebSocket</dd></div>
       </dl>
       <p class="lead">本次工作将 <strong>FashionStar CAN 舵机与原生 UART/RS-485 舵机</strong>接入 motorbridge，建立统一的设备发现、位置运动控制、状态采集、参数配置和应用调用链路。上层使用同一组电机操作接口，底层由 FashionStar 驱动完成两种协议的编码、通信、解析与单位转换。</p>
       <div class="metrics" aria-label="交付要点">
         <div class="metric"><b>2 条</b><span>CAN / UART 协议路径</span></div>
         <div class="metric"><b>POS_VEL</b><span>统一位置与速度上限控制</span></div>
-        <div class="metric"><b>241 项</b><span>Rust 工作区测试通过</span></div>
+        <div class="metric"><b>242 项</b><span>Rust 工作区测试通过</span></div>
         <div class="metric"><b>15 项</b><span>Python 接口与环境测试通过</span></div>
       </div>
     </header>
@@ -180,7 +180,7 @@
     <main>
       <section id="delta">
         <h2><span class="num">01</span>与 main 的差异：新增了什么</h2>
-        <p>以项目 <code>main@4741f28</code> 为基线，本分支新增 FashionStar 供应商，并完成 CAN、UART 两个型号入口及配套集成。代码差异包含 <strong>5 个提交、69 个文件</strong>，累计新增 3,417 行、删除 116 行。</p>
+        <p>以项目 <code>main@4741f28</code> 为基线，本分支新增 FashionStar 供应商，并完成 CAN、UART 两个型号入口及配套集成。代码差异覆盖协议驱动、按帧类型复用的核心控制器、统一接口、命令行与 WebSocket 接入。</p>
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">交付维度</th><th scope="col">main 基线</th><th scope="col">本次交付</th></tr></thead>
           <tbody>
@@ -192,7 +192,7 @@
             <tr><th scope="row">工程交付</th><td>既有构建、测试及文档体系</td><td>增加 FashionStar 协议与回归测试、双协议功能说明、中英文接口文档，并完成跨接口联调和 Windows 编译检查。</td></tr>
           </tbody>
         </table></div>
-        <p class="small">比较口径：<code>git diff main...7e8e2c3</code>。本报告使用上述确定的提交版本作为验收基准。</p>
+        <p class="small">比较口径：<code>git diff 4741f28 feat/fashionstar-unified</code>，以 main 基线核对交付分支的完整差异。</p>
       </section>
 
       <section id="capabilities">
@@ -207,7 +207,7 @@
             <tr><th scope="row">行程与速度上限</th><td>绝对目标范围 ±1024 圈；角度与速度原始分辨率分别为 0.1°、0.1°/s。</td><td>使用相同的目标范围、单位和数值校验规则；长行程旋转通过设置远距离目标完成。</td><td><span class="ok">统一参数语义</span></td></tr>
             <tr><th scope="row">使能与停止保持</th><td><code>enable</code>、<code>stop</code> 写入 <code>0x7B=0x11</code>，保持当前位置。</td><td>发送 <code>0x18</code>，模式 <code>0x11</code>，保持当前位置。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">卸力</th><td><code>disable</code> 写入 <code>0x7B=0x10</code>，释放输出。</td><td>发送 <code>0x18</code>，模式 <code>0x10</code>，释放输出。</td><td><span class="ok">两条路径已实现</span></td></tr>
-            <tr><th scope="row">当前位置置零</th><td>卸力后等待 50 ms，写入 <code>0x7A=0</code>，重建后续状态采样基线。</td><td>发送 <code>0x17</code> 原点设置命令，并重建后续状态采样基线。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">当前位置置零</th><td>卸力后等待 50 ms，写入 <code>0x7A=0</code>，重建后续状态采样基线。</td><td>卸力并等待 20 ms，发送 <code>0x17</code> 原点设置命令，重建后续状态采样基线。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">位置与速度反馈</th><td>读取多圈位置；依据连续有效位置采样及时间差计算平均速度。</td><td>通过 <code>0x16</code> 监控命令取得多圈位置；依据连续有效采样计算平均速度。</td><td><span class="ok">统一 rad / rad·s⁻¹</span></td></tr>
             <tr><th scope="row">电流与温度反馈</th><td>读取电流和温度寄存器，换算为 A、°C。</td><td>从监控回包解析电流和温度 ADC，换算为 A、°C。</td><td><span class="ok">统一状态字段</span></td></tr>
             <tr><th scope="row">电压、功率与状态</th><td>通过参数读取获取电压、功率、状态字、圈数及单圈角度。</td><td>将相同公共参数编号映射至 UART 参数或角度查询命令。</td><td><span class="ok">支持参数流读取</span></td></tr>
@@ -217,7 +217,7 @@
             <tr><th scope="row">WebSocket 集成</th><td>接入目标切换、扫描、控制、单次状态、状态流、参数流和改 ID。</td><td>复用同一组操作与公共参数编号，显式选择 <code>transport=uart</code>。</td><td><span class="ok">统一上层流程</span></td></tr>
           </tbody>
         </table></div>
-        <div class="summary"><strong>配置生效流程</strong><p>配置修改完成后重新上电，按新 ServoID 和通信速率建立连接，再读取型号及目标参数确认配置。位置运动、保持、卸力等运行控制按指令执行。</p></div>
+        <div class="summary"><strong>配置生效流程</strong><p>CAN 配置修改后重新上电；UART 的 ID 和波特率修改立即生效并在断电后保留。按新 ServoID 和通信速率建立连接，再读取型号及目标参数确认配置。位置运动、保持、卸力等运行控制按指令执行。</p></div>
       </section>
 
       <section id="protocols">
@@ -238,9 +238,9 @@
             <ul>
               <li>使用 <code>transport=uart</code>、8-N-1 和显式串口波特率；SDK 创建入口默认 115200。</li>
               <li>实现请求/回应帧、长度检查、累加校验、分包组包及噪声重同步。</li>
-              <li>原生 <code>0x0F</code> 位置命令携带速度上限；加减速时间为 0，执行功率使用设备配置上限。</li>
+              <li>原生 <code>0x0F</code> 位置命令携带速度上限；加速和减速时间均为协议下限 20 ms，执行功率使用设备配置上限。</li>
               <li>原生 <code>0x16</code> 监控回包集中提供位置、电流、温度、状态等数据。</li>
-              <li>同一控制器下的总线事务串行执行，发送间隔按 10 ms 管理，回复按命令、ServoID、参数地址和长度匹配。</li>
+              <li>同一控制器下的总线事务串行执行，发送间隔至少 5 ms；低波特率时根据请求与回应长度增加间隔，回复按命令、ServoID、参数地址和长度匹配。</li>
             </ul>
           </div>
         </div>
@@ -313,7 +313,7 @@
         <ol class="steps">
           <li><b>识别设备</b>选择链路，扫描 ServoID，读取型号和当前参数。</li>
           <li><b>写入配置</b>使用公共参数编号设置 ID、通信速率或运行配置。</li>
-          <li><b>重新上电</b>按设备配置生效流程完成电源重启。</li>
+          <li><b>应用配置</b>CAN 重新上电；UART 的 ID 和波特率立即切换。</li>
           <li><b>回读确认</b>使用新连接参数重新识别设备并核对目标配置。</li>
         </ol>
       </section>
@@ -324,7 +324,7 @@
         <div class="table-wrap"><table class="evidence">
           <thead><tr><th scope="col">验证项目</th><th scope="col">方法与覆盖内容</th><th scope="col">结果</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Rust 工作区回归</th><td><code>cargo test --workspace --all-targets --offline</code>：241 项测试通过，包含 6 项 FashionStar 专属测试。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">Rust 工作区回归</th><td><code>cargo test --workspace --locked --offline</code>：242 项测试通过，包含 6 项 FashionStar 专属测试。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">FashionStar 协议测试</th><td>CAN 报文与状态回归；UART 命令编码、参数校验、公共编号转换、请求匹配、事务串行、状态换算与解码恢复。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">Python 接口与环境</th><td>15 项接口元数据、模块导入、平台传输和状态快照相关测试。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">跨接口串口联调</th><td>通过伪串口运行 Python/C ABI、Rust CLI、Python CLI 和 C++；检查命令、查询、配置、状态以及控制器关闭流程。</td><td><span class="ok">通过</span></td></tr>
@@ -338,7 +338,7 @@
           <div class="panel"><h3>功能一致性</h3><ul><li>CAN 与 UART 使用相同的设备创建参数及电机操作语义。</li><li>多圈角度保留正负方向，位置、电流、温度按统一单位输出。</li><li>型号查询和 ID 设置复用公共参数编号，UART 原生地址转换集中在驱动。</li><li>WS 默认参数流覆盖电压、电流、功率、温度、状态、多圈位置、圈数和单圈角度。</li></ul></div>
           <div class="panel"><h3>通信与数据一致性</h3><ul><li>校验错误、分段回包、噪声伪帧头及异常长度均纳入解码测试。</li><li>查询按设备、命令和参数匹配，超时后能够继续完成后续查询。</li><li>同一 UART 控制器下的多设备请求按事务串行执行。</li><li>设备 ID 由底层实现统一提供，状态元数据与实际寻址保持一致。</li></ul></div>
         </div>
-        <p class="small">统计中的 6 项 FashionStar 测试已包含在 241 项 Rust 工作区测试中。验证记录与命令输出随项目保存在 <code>temp/fashionstar-uart-final-review/</code>。</p>
+        <p class="small">统计中的 6 项 FashionStar 测试已包含在 242 项 Rust 工作区测试中。验证记录与命令输出保存在 <code>temp/fashionstar-final-review-20261111/</code>。</p>
       </section>
 
       <section id="delivery">
@@ -350,15 +350,15 @@
             <tr><th scope="row">核心扩展</th><td><code>motor_core/</code>：控制器、设备及总线按帧类型参数化，提供 <code>CanFrame</code> 与 <code>UartFrame</code> 两条类型化路径。</td></tr>
             <tr><th scope="row">调用与工具</th><td><code>motor_abi/</code>、<code>motor_cli/</code>、<code>bindings/python/</code>、<code>bindings/cpp/</code>、<code>integrations/ws_gateway/</code>：统一创建、控制、反馈和参数操作。</td></tr>
             <tr><th scope="row">使用文档</th><td>FashionStar 中英文 API 文档、Python SDK/CLI 示例、C++ 入口说明、WS 能力声明与协议说明。</td></tr>
-            <tr><th scope="row">版本与验证</th><td>交付提交 <code>7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae</code>；工作区测试、接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
+            <tr><th scope="row">版本与验证</th><td>交付分支 <code>feat/fashionstar-unified</code>；工作区测试、接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
           </tbody>
         </table></div>
-        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 双协议软件接入工作已完成。CAN 与 UART/RS-485 均已形成<strong>设备发现 → 位置控制 → 状态采集 → 参数配置 → 应用集成</strong>的完整软件链路，交付版本已提交并推送。各项已执行的软件验证通过，现有成果为业务应用统一调用、设备配置及后续型号接入提供了可复用的实现基础。</p></div>
+        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 双协议软件接入工作已完成。CAN 与 UART/RS-485 均已形成<strong>设备发现 → 位置控制 → 状态采集 → 参数配置 → 应用集成</strong>的完整软件链路。各项已执行的软件验证通过，现有成果为业务应用统一调用、设备配置及后续型号接入提供了可复用的实现基础。</p></div>
 
         <h3>版本与技术依据</h3>
         <ul class="refs">
-          <li><a href="https://github.com/servodevelop/motorbridge/compare/4741f28d749817e5f976ff5ee1feccffd89be050...7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae" target="_blank" rel="noopener noreferrer">交付分支与 main 基线的代码差异</a></li>
-          <li><a href="https://github.com/servodevelop/motorbridge/tree/7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae/motor_vendors/fashionstar" target="_blank" rel="noopener noreferrer">FashionStar 驱动交付源码</a></li>
+          <li><a href="https://github.com/servodevelop/motorbridge/compare/4741f28d749817e5f976ff5ee1feccffd89be050...feat/fashionstar-unified" target="_blank" rel="noopener noreferrer">交付分支与 main 基线的代码差异</a></li>
+          <li><a href="https://github.com/servodevelop/motorbridge/tree/feat/fashionstar-unified/motor_vendors/fashionstar" target="_blank" rel="noopener noreferrer">FashionStar 驱动交付源码</a></li>
           <li><a href="https://fashionstar.com.hk/wiki/protocols/servo/can-bus/" target="_blank" rel="noopener noreferrer">FashionStar CAN 协议</a></li>
           <li><a href="https://fashionstar.com.cn/wiki/protocols/servo/uart-rs485/" target="_blank" rel="noopener noreferrer">FashionStar UART/RS-485 协议</a></li>
           <li><a href="https://fashionstar.com.cn/wiki/software/servo/canbus-web-config-tool/" target="_blank" rel="noopener noreferrer">FashionStar CAN 配置工具</a></li>
@@ -366,7 +366,7 @@
         </ul>
       </section>
     </main>
-    <footer><span>motorbridge · FashionStar 双协议软件交付验收</span><span>2026-11-11 · main 4741f28 → 7e8e2c3</span></footer>
+    <footer><span>motorbridge · FashionStar 双协议软件交付验收</span><span>2026-11-11 · main 4741f28 → feat/fashionstar-unified</span></footer>
   </article>
 </body>
 </html>

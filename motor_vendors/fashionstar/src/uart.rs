@@ -4,6 +4,7 @@ use motor_core::bus::{CanBus, UartFrame};
 use motor_core::device::MotorDevice;
 use motor_core::error::{MotorError, Result};
 use motor_core::feedback::{FeedbackCache, FeedbackSnapshot};
+use parking_lot::FairMutex;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
 use std::time::{Duration, Instant};
@@ -18,7 +19,7 @@ struct Pending {
 pub(crate) struct UartMotor {
     motor_id: u16,
     bus: Arc<dyn CanBus<UartFrame>>,
-    transactions: Arc<Mutex<()>>,
+    transactions: Arc<FairMutex<()>>,
     pending: Mutex<Option<Pending>>,
     ready: Condvar,
     previous: Mutex<Option<(i32, Instant)>>,
@@ -67,7 +68,7 @@ impl UartMotor {
         _feedback_id: u16,
         model: &str,
         bus: Arc<dyn CanBus<UartFrame>>,
-        transactions: Arc<Mutex<()>>,
+        transactions: Arc<FairMutex<()>>,
     ) -> Result<Self> {
         if model != "uart" || motor_id > 254 {
             return Err(MotorError::InvalidArgument(
@@ -84,12 +85,6 @@ impl UartMotor {
             state: FeedbackCache::new(),
             state_valid: AtomicBool::new(false),
         })
-    }
-
-    fn lock(&self) -> Result<std::sync::MutexGuard<'_, ()>> {
-        self.transactions
-            .lock()
-            .map_err(|_| MotorError::Io("FashionStar UART transaction lock poisoned".to_string()))
     }
 
     fn send(&self, command: u8, fields: &[u8]) -> Result<()> {
@@ -155,7 +150,7 @@ impl UartMotor {
     }
 
     pub(crate) fn get_register_u32(&self, rid: u8, timeout: Duration) -> Result<u32> {
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
         if (0x15..=0x18).contains(&rid) {
             let (command, length) = if rid == 0x18 { (0x0a, 4) } else { (0x10, 8) };
             let (data, _) = self.request(command, None, length, timeout)?;
@@ -190,7 +185,7 @@ impl UartMotor {
                 "invalid FashionStar UART write: parameter=0x{rid:02X}, value={value}"
             )));
         }
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
         let mut fields = vec![address];
         fields.extend_from_slice(&value.to_le_bytes()[..width]);
         // Optional ACKs are disabled by default. Success means the packet was sent.
@@ -202,9 +197,9 @@ impl UartMotor {
         let speed = protocol::speed_raw(velocity_limit)?;
         let mut fields = target.to_le_bytes().to_vec();
         fields.extend_from_slice(&speed.to_le_bytes());
-        // No imposed acceleration/deceleration ramp; power=0 uses the configured limit.
-        fields.extend_from_slice(&[0; 6]);
-        let _guard = self.lock()?;
+        // The protocol requires at least 20 ms for each ramp; power=0 uses the configured limit.
+        fields.extend_from_slice(&[20, 0, 20, 0, 0, 0]);
+        let _guard = self.transactions.lock();
         self.send(0x0f, &fields)
     }
 
@@ -223,17 +218,20 @@ impl UartMotor {
     }
 
     pub(crate) fn stop(&self) -> Result<()> {
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
         self.send(0x18, &[0x11, 0, 0])
     }
 
     pub(crate) fn disable(&self) -> Result<()> {
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
         self.send(0x18, &[0x10, 0, 0])
     }
 
     pub(crate) fn set_zero_position(&self) -> Result<()> {
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
+        // Origin changes require released output, as in the manufacturer's web tool.
+        self.send(0x18, &[0x10, 0, 0])?;
+        std::thread::sleep(Duration::from_millis(20));
         self.send(0x17, &[0])?;
         self.previous
             .lock()
@@ -244,7 +242,7 @@ impl UartMotor {
     }
 
     pub(crate) fn request_motor_feedback(&self, timeout: Duration) -> Result<()> {
-        let _guard = self.lock()?;
+        let _guard = self.transactions.lock();
         let previous = self
             .previous
             .lock()
@@ -412,16 +410,20 @@ mod tests {
             .unwrap();
         assert_eq!(
             commands.recv().unwrap().data,
-            [0x0f, 0, 0xf8, 0xf8, 0xff, 0xff, 8, 7, 0, 0, 0, 0, 0, 0]
+            [0x0f, 0, 0xf8, 0xf8, 0xff, 0xff, 8, 7, 20, 0, 20, 0, 0, 0]
         );
         for (operation, expected) in [
             (motor.enable(), vec![0x18, 0, 0x11, 0, 0]),
             (motor.disable(), vec![0x18, 0, 0x10, 0, 0]),
-            (motor.set_zero_position(), vec![0x17, 0, 0]),
         ] {
             operation.unwrap();
             assert_eq!(commands.recv().unwrap().data, expected);
         }
+        let zero_started = Instant::now();
+        motor.set_zero_position().unwrap();
+        assert!(zero_started.elapsed() >= Duration::from_millis(20));
+        assert_eq!(commands.recv().unwrap().data, [0x18, 0, 0x10, 0, 0]);
+        assert_eq!(commands.recv().unwrap().data, [0x17, 0, 0]);
         motor
             .write_register_u32(0x91, (-900i16) as u16 as u32)
             .unwrap();
@@ -453,8 +455,15 @@ mod tests {
         let (controller, commands, replies) = setup();
         let first = controller.add_motor(1, CAN_ID, "uart").unwrap();
         let second = controller.add_motor(2, CAN_ID, "uart").unwrap();
-        let query =
-            std::thread::spawn(move || first.get_register_u32(0x01, Duration::from_secs(1)));
+        let query = std::thread::spawn(move || {
+            assert_eq!(
+                first
+                    .get_register_u32(0x01, Duration::from_secs(1))
+                    .unwrap(),
+                0x1234
+            );
+            first.get_register_u32(0x01, Duration::from_secs(1))
+        });
         assert_eq!(
             commands.recv_timeout(Duration::from_secs(1)).unwrap().data,
             [3, 1, 6]
@@ -465,12 +474,17 @@ mod tests {
         reply(&replies, &[4, 1, 6, 1]); // optional write ACK
         assert!(commands.recv_timeout(Duration::from_millis(20)).is_err());
         reply(&replies, &[3, 1, 6, 0x34, 0x12]);
-        assert_eq!(query.join().unwrap().unwrap(), 0x1234);
-        write.join().unwrap().unwrap();
         assert_eq!(
             commands.recv_timeout(Duration::from_secs(1)).unwrap().data,
             [0x18, 2, 0x10, 0, 0]
         );
+        write.join().unwrap().unwrap();
+        assert_eq!(
+            commands.recv_timeout(Duration::from_secs(1)).unwrap().data,
+            [3, 1, 6]
+        );
+        reply(&replies, &[3, 1, 6, 0x34, 0x12]);
+        assert_eq!(query.join().unwrap().unwrap(), 0x1234);
         controller.close_bus().unwrap();
     }
 

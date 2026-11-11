@@ -203,7 +203,7 @@ files there when new hardware photos become available.
 - FashionStar:
   - models: `fashionstar` (CAN), `uart` (native UART/RS-485)
   - modes: `scan`, `ping`, `status`, `enable`, `disable`, `stop`, `pos-vel`, `zero`, parameter read/write; ID changes use `--set-motor-id`
-  - note: configuration requires a power cycle; VEL, MIT/quantitative torque and FORCE_POS are currently unsupported
+  - note: CAN configuration requires a power cycle; UART ID/baud changes take effect immediately; VEL, MIT/quantitative torque and FORCE_POS are currently unsupported
 
 ## RobStride Protocol Paths
 

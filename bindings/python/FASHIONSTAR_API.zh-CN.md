@@ -28,10 +28,10 @@ finally:
 上述退出方式只关闭连接。现有 `with Controller(...)` 在退出时还会执行 `shutdown()`，使舵机卸力。`request_feedback()` 后读到的位置可能仍在运动途中，不表示已到达目标。
 
 - `add_fashionstar_motor(motor_id, feedback_id, model)`：ServoID 范围 0..254；`fashionstar` 选择 CAN，`uart` 选择 UART/RS-485。
-- 使用已有 `enable()`、`disable()`、`stop()`、`set_zero_position()`、`send_pos_vel(pos, vlim)`、`get_register_u32(rid, timeout_ms)`、`write_register_u32(rid, value)`。
+- 使用已有 `enable()`（停止并保持）、`disable()`、`set_zero_position()`、`send_pos_vel(pos, vlim)`、`get_register_u32(rid, timeout_ms)`、`write_register_u32(rid, value)`。
 - `ensure_mode(Mode.POS_VEL)` 可用。VEL、MIT/定量力矩与 FORCE_POS 暂不支持；其他尚无协议映射的操作返回错误。
 - `vel` 由相邻位置采样估算；`torq` 沿用 MyActuator 的映射，表示电流 A（`0x11` 的 mA 值除以 1000）；`t_mos` 为按官方 CAN 工具默认公式换算的舵机温度（℃）。首次速度采样、无效温度与转子温度为 `NaN`。`torq` 不表示 N·m 力矩。
-- 配置写入需要重新上电生效。写 `0x81` 后，先断电重启，再以新 ID 创建连接并读取验证；不要立即切换或验证当前句柄。
+- CAN 配置写入需要重新上电生效；UART 的 ID 和波特率修改立即生效并在断电后保留。写 `0x81` 或 `0x82` 后，关闭旧连接，按新配置创建连接并读取验证；CAN 舵机需先重新上电，当前句柄不会自动切换 ID。
 
 ## Python CLI
 

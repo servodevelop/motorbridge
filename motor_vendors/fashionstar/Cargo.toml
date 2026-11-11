@@ -14,4 +14,5 @@ path = "src/lib.rs"
 
 [dependencies]
 motor_core = { path = "../../motor_core" }
+parking_lot = "0.12.5"
 serialport = { version = "4.6", default-features = false }

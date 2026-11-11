@@ -1,5 +1,5 @@
 use crate::commands::{as_u64, parse_transport_in_msg};
-use crate::model::{Target, Vendor};
+use crate::model::{Target, Transport, Vendor};
 use crate::vendors::transport_ws::open_fashionstar_controller;
 use motor_core::error::MotorError;
 use motor_vendor_fashionstar::{FashionstarController, CAN_ID};
@@ -165,7 +165,7 @@ pub(crate) fn cmd_set_id_fashionstar(v: &Value, base: &Target) -> Result<Value, 
             "new_motor_id": new_motor_id,
             "feedback_id": CAN_ID,
             "verified": false,
-            "requires_power_cycle": true
+            "requires_power_cycle": target.transport != Transport::Uart
         }))
     })
 }
