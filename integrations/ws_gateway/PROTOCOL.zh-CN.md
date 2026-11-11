@@ -987,7 +987,7 @@ Hexfellow mode：
 | HighTorque | vendor `request_motor_feedback` + `latest_state`（2026-10-24 起连发两帧：17 01 位置/速度/力矩 + 16 0E 温度/错误码，非阻塞；回帧物理量带力矩系数补偿，26 0E 回帧就地补丁 t_mos/fault_code 不推进状态计数） |
 | FashionStar | CAN 查询位置 `0x15/0x16`、状态 `0x14`、温度 `0x13` 和电流 `0x11`；UART 使用 `0x16` 监控指令；速度由相邻位置采样估算，`torq` 为电流 A |
 
-UC-06 与原有 USB CAN 使用相同操作：`set_target`、`scan`、`set_id`、`verify` 设置 `transport:"uc06"`、`model:"fashionstar"`、`serial_port` 和 `can_bitrate`（默认 1000000 bit/s）。其 USB 串口固定 1 Mbps。
+UC-06 与原有 USB CAN 使用相同操作：`set_target`、`scan`、`set_id`、`verify` 设置 `transport:"uc06"`、`model:"fashionstar"`、`serial_port` 和 `can_bitrate`（默认 1000000 bit/s）。其 USB 串口固定 1 Mbps。FashionStar 驱动忽略 `feedback_id`，填 `0` 即可；目标信息回显输入值，状态中的实际通信标识取自厂商驱动。
 
 FashionStar 的 CAN/UART ID（`0x81`）与波特率（`0x82`）修改立即生效并在断电后保留。通过 `write_register_u32` 写入这两个参数时，返回 `requires_power_cycle:false` 并停止周期运动发送；CAN 写入后等待 120 ms，再用 `set_target` 设置新 ID 和匹配的主机速率，回读确认后恢复控制。
 

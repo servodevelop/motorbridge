@@ -524,12 +524,10 @@ export MOTORBRIDGE_LIB=&quot;$PWD/target/release/libmotor_abi.so&quot;</code></p
 import time
 from motorbridge import Controller
 
-# FashionStar 统一接口的通信标识；UART 按接口约定沿用此值。
-FASHIONSTAR_FEEDBACK_ID = 0x321
-
 serial_port = &quot;/dev/ttyUSB0&quot;
 serial_baud = 115200
 motor_id = 0
+feedback_id = 0  # 统一接口占位参数，FashionStar 驱动忽略此值
 target_degrees = 90
 speed_degrees_per_second = 30
 feedback_duration_seconds = 6.0
@@ -541,7 +539,7 @@ controller = Controller.from_uart(serial_port, serial_baud)
 # 离开 with 时，控制器会卸力并释放连接。
 with controller:
     # 2. 添加 FashionStar 舵机，选择该厂商下的 uart 子型号。
-    motor = controller.add_fashionstar_motor(motor_id, FASHIONSTAR_FEEDBACK_ID, model=&quot;uart&quot;)
+    motor = controller.add_fashionstar_motor(motor_id, feedback_id, model=&quot;uart&quot;)
     try:
         motor.send_pos_vel(
             math.radians(target_degrees),
@@ -562,12 +560,12 @@ with controller:
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">连接方式</th><th scope="col">创建通信连接</th><th scope="col">添加 FashionStar 舵机</th></tr></thead>
           <tbody>
-            <tr><th scope="row">UART / RS-485</th><td><code>controller = Controller.from_uart(serial_port, serial_baud)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, FASHIONSTAR_FEEDBACK_ID, model="uart")</code></td></tr>
-            <tr><th scope="row">标准 USB CAN</th><td><code>controller = Controller(channel="can0")</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, FASHIONSTAR_FEEDBACK_ID, model="fashionstar")</code></td></tr>
-            <tr><th scope="row">UC-06</th><td><code>controller = Controller.from_uc06(serial_port, can_bitrate=1_000_000)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, FASHIONSTAR_FEEDBACK_ID, model="fashionstar")</code></td></tr>
+            <tr><th scope="row">UART / RS-485</th><td><code>controller = Controller.from_uart(serial_port, serial_baud)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, feedback_id, model="uart")</code></td></tr>
+            <tr><th scope="row">标准 USB CAN</th><td><code>controller = Controller(channel="can0")</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, feedback_id, model="fashionstar")</code></td></tr>
+            <tr><th scope="row">UC-06</th><td><code>controller = Controller.from_uc06(serial_port, can_bitrate=1_000_000)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, feedback_id, model="fashionstar")</code></td></tr>
           </tbody>
         </table></div>
-        <p>UART 的 <code>serial_baud</code> 填写实际串口速率；UC-06 的 <code>can_bitrate</code> 填写实际 CAN 速率，单位 bit/s；标准 USB CAN 沿用第 05 节配置好的 <code>can0</code>。添加电机时，<code>motor_id</code> 指定设备编号，<code>FASHIONSTAR_FEEDBACK_ID</code> 提供通信标识，<code>model</code> 选择 FashionStar 的子型号。</p>
+        <p>UART 的 <code>serial_baud</code> 填写实际串口速率；UC-06 的 <code>can_bitrate</code> 填写实际 CAN 速率，单位 bit/s；标准 USB CAN 沿用第 05 节配置好的 <code>can0</code>。添加电机时，<code>motor_id</code> 指定设备编号，<code>feedback_id</code> 填 <code>0</code> 即可，FashionStar 驱动忽略该参数，<code>model</code> 选择 FashionStar 的子型号。</p>
         <h4>第 3 步 · 运行程序，查看中文反馈</h4>
 <div class="code-block" id="guide-python-run"><div class="code-label">终端 · 运行刚保存的文件</div><pre><code class="language-bash">python3 fashionstar_demo.py</code></pre></div>
         <p class="expect"><strong>完成标志：</strong>终端持续显示“位置、速度、电流、温度”，程序运行约 6 秒后退出并卸力。首条速度样本建立计算基线，后续样本显示估算速度。</p>

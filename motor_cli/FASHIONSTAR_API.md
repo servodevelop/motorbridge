@@ -8,7 +8,7 @@ Practical reference for FashionStar CAN and UART/RS-485 control in motorbridge.
 
 - Vendor: `fashionstar`. Model `fashionstar` selects CAN; model `uart` selects native UART/RS-485. The following CAN settings apply to the default model.
 - Classic CAN, standard 11-bit arbitration ID **0x321** for both directions. `motor_id` is the ServoID in the payload, **0..254**; 255 is not accepted as an individual motor.
-- `feedback_id` is fixed at `0x321` (801), independent of ServoID.
+- The driver ignores `feedback_id`; pass `0`. The CAN arbitration ID is handled inside the vendor driver and does not depend on this parameter.
 - Transports: `auto`, `socketcan`, `mcu-serial`, `uc06`. The MCU firmware must implement motorbridge's existing serial protocol. UC-06 uses its own serial framing through `--transport uc06` (see section 7).
 - Match the bus bitrate to the servo's configured value (documented default: 500 kbit/s). Linux uses a preconfigured `can0`; PCAN channels can specify `can0@500000`.
 
@@ -34,7 +34,7 @@ The current protocol has no native continuous-velocity command. For extended rot
 | Argument | Default | Meaning |
 |---|---|---|
 | `--motor-id` | 1 | ServoID, 0..254 |
-| `--feedback-id` | `0x321` | Fixed CAN arbitration ID |
+| `--feedback-id` | `0x321` | Common interface parameter; ignored by the driver |
 | `--pos` | 0 | Absolute position in rad, within ±1024 turns |
 | `--vlim` | 1 | Positive speed limit in rad/s; rounded to 1..65535 units of 0.1°/s |
 | `--timeout-ms` | 500 | Reply timeout; protected-register unlock delays are additional |
@@ -73,7 +73,7 @@ Python SDK/CLI examples: [FASHIONSTAR_API.md](../bindings/python/FASHIONSTAR_API
 
 Use `--model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200` with `--vendor fashionstar`. Select the baud rate configured on the servo; the UART factory default is 115200, while CLI serial options retain their existing defaults. The link uses 8-N-1 without flow control and an adapter that handles half-duplex direction.
 
-`motor_id` remains ServoID 0..254. Keep `feedback_id=0x321` as an interface placeholder; UART has no CAN arbitration ID or separate feedback address. Existing scan, ID update, control, state and parameter-stream operations apply.
+`motor_id` remains ServoID 0..254. Use `feedback_id=0`; the driver ignores it; UART has no CAN arbitration ID or separate feedback address. Existing scan, ID update, control, state and parameter-stream operations apply.
 
 Parameter APIs retain the existing FashionStar IDs, translated inside the driver: model `0x01`, firmware `0x02`, serial `0x03/0x04`, state `0x10..0x18`, configuration `0x80..0x89`, `0x8B`, `0x8C`, `0x8E..0x93`. These are motorbridge parameter IDs, not native UART addresses. For example, `0x81` maps to UART ID parameter 34. The baud index at `0x82` uses UART values 1..8 (9600, 19200, 38400, 57600, 115200, 250000, 500000, 1000000). Unsupported CAN-only parameters return errors. UART ID and baud changes take effect immediately and persist across power cycles. Close the old connection and recreate it with the new settings; the live handle is not retargeted. UART `set_id` returns `verified:false` and `requires_power_cycle:false`; use `verify` with the new ID to check the result.
 
@@ -83,7 +83,7 @@ Position control uses UART command `0x0F` with a speed limit, 20 ms acceleration
 motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode status
 ```
 
-WS uses the same operations and parameter IDs. Set `model:"uart"`, `transport:"uart"`, `serial_port` and `serial_baud:115200`; keep `feedback_id:801` or omit it.
+WS uses the same operations and parameter IDs. Set `model:"uart"`, `transport:"uart"`, `serial_port` and `serial_baud:115200`; use `feedback_id:0` or omit it. Target information echoes the input; state and scan results obtain the actual communication ID from the driver.
 
 ## 7) UC-06 USB-to-CAN
 
@@ -95,7 +95,7 @@ USB serial is fixed at 1000000 baud, 8-N-1; `--serial-baud` is unused for UC-06.
 motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --motor-id 0 --mode status
 ```
 
-Rust uses `FashionstarController::new_uc06(port, can_bitrate)`. C uses `motor_controller_new_uc06(port, can_bitrate)`; Python and C++ use `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`, then add a `fashionstar` motor with feedback ID `0x321`. WS accepts `transport:"uc06"`, `serial_port` and `can_bitrate` in `set_target`, `scan`, `set_id` and `verify`.
+Rust uses `FashionstarController::new_uc06(port, can_bitrate)`. C uses `motor_controller_new_uc06(port, can_bitrate)`; Python and C++ use `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`, then add a `fashionstar` motor with feedback ID `0` (ignored by the driver). WS accepts `transport:"uc06"`, `serial_port` and `can_bitrate` in `set_target`, `scan`, `set_id` and `verify`.
 
 ## 8) Protocol References
 

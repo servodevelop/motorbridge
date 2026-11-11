@@ -56,6 +56,7 @@ impl FashionstarController {
         Ok(Self::new(Arc::new(Uc06Bus::open(port, can_bitrate)?)))
     }
 
+    /// The driver ignores feedback_id; pass 0 for the common interface.
     pub fn add_motor(
         &self,
         motor_id: u16,
@@ -180,11 +181,36 @@ mod tests {
     }
 
     #[test]
+    fn feedback_id_does_not_change_can_communication() {
+        for feedback_id in [0, 1, CAN_ID, CAN_ID + 1, u16::MAX] {
+            let bus = Arc::new(CanBusStub::default());
+            let controller = FashionstarController::new(bus.clone());
+            let motor = controller.add_motor(0, feedback_id, "fashionstar").unwrap();
+            motor.send_cmd_pos_vel(1.0, 1.0).unwrap();
+            assert_eq!(motor.feedback_id(), CAN_ID);
+            let sent = bus.sent.lock().unwrap();
+            assert_eq!(sent.len(), 6);
+            assert!(sent
+                .iter()
+                .all(|frame| { frame.arbitration_id == u32::from(CAN_ID) && frame.data[1] == 0 }));
+            drop(sent);
+            motor
+                .request_motor_feedback(Duration::from_secs(1))
+                .unwrap();
+            assert_eq!(
+                motor.latest_state().unwrap().arbitration_id,
+                u32::from(CAN_ID)
+            );
+            controller.close_bus().unwrap();
+        }
+    }
+
+    #[test]
     fn can_model_preserves_commands_and_feedback() {
         let bus = Arc::new(CanBusStub::default());
         let controller = FashionstarController::new(bus.clone());
         assert!(controller.add_motor(0, CAN_ID, "uart").is_err());
-        let motor = controller.add_motor(0, CAN_ID, "fashionstar").unwrap();
+        let motor = controller.add_motor(0, 0, "fashionstar").unwrap();
         assert_eq!(motor.vendor(), "fashionstar");
         assert_eq!(motor.model(), "fashionstar");
         assert_eq!(motor.motor_id(), 0);
@@ -194,6 +220,9 @@ mod tests {
             .unwrap();
         let sent = bus.sent.lock().unwrap();
         assert_eq!(sent.len(), 6);
+        assert!(sent
+            .iter()
+            .all(|frame| frame.arbitration_id == u32::from(CAN_ID)));
         assert_eq!(&sent[0].data[..5], &[b'w', 0, 0x52, 2, 0]);
         assert_eq!(sent[1].data, [b'W', 0, 0x53, 0xf8, 0xf8, 0x54, 0xff, 0xff]);
         assert_eq!(&sent[2].data[..5], &[b'w', 0, 0x58, 8, 7]);

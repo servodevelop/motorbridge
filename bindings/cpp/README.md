@@ -43,11 +43,11 @@ feedback is available. Only complete state updates advance the sequence.
 - `add_myactuator_motor(motor_id, feedback_id, model)`
 - `add_robstride_motor(motor_id, feedback_id, model)`
 - `add_hightorque_motor(motor_id, feedback_id, model)`
-- `add_fashionstar_motor(motor_id, feedback_id, model)`
+- `add_fashionstar_motor(motor_id, feedback_id, model)`: the driver ignores `feedback_id`; pass `0`.
 
-For native FashionStar UART/RS-485, use `Controller::from_uart(serial_port, baud)` (default baud 115200), then `add_fashionstar_motor(motor_id, 0x321, "uart")`.
+For native FashionStar UART/RS-485, use `Controller::from_uart(serial_port, baud)` (default baud 115200), then `add_fashionstar_motor(motor_id, 0, "uart")`.
 
-For the UC-06 CAN/USB adapter, use `Controller::from_uc06(serial_port, can_bitrate)` (default CAN bitrate 1000000 bit/s), then `add_fashionstar_motor(motor_id, 0x321, "fashionstar")`. USB serial runs at 1 Mbps.
+For the UC-06 CAN/USB adapter, use `Controller::from_uc06(serial_port, can_bitrate)` (default CAN bitrate 1000000 bit/s), then `add_fashionstar_motor(motor_id, 0, "fashionstar")`. USB serial runs at 1 Mbps.
 
 ## Quick Start
 

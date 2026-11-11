@@ -1,7 +1,7 @@
 use crate::args::{get_f32, get_opt_u16_hex_or_dec, get_str, get_u16_hex_or_dec, get_u64};
 use motor_core::bus::{open_transport, CanBus, Transport, TransportParams};
 use motor_core::error::MotorError;
-use motor_vendor_fashionstar::{FashionstarController, CAN_ID};
+use motor_vendor_fashionstar::FashionstarController;
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -77,9 +77,6 @@ pub fn run_fashionstar(
     {
         return Err(format!("unknown FashionStar mode: {mode}").into());
     }
-    if args.contains_key("set-feedback-id") {
-        return Err("FashionStar CAN arbitration ID is fixed at 0x321".into());
-    }
     if matches!(mode.as_str(), "read-param" | "write-param")
         && !matches!(get_str(args, "param-type", "u32").as_str(), "u16" | "u32")
     {
@@ -117,11 +114,11 @@ pub fn run_fashionstar(
         )?;
         let mut hits = 0usize;
         for id in start_id..=end_id {
-            let motor = controller.add_motor(id, CAN_ID, model)?;
+            let motor = controller.add_motor(id, 0, model)?;
             match motor.get_register_u32(1, timeout) {
                 Ok(model_code) => {
                     hits += 1;
-                    println!("[hit] vendor=fashionstar probe=0x{id:02X} feedback_id=0x321 model_code={model_code}");
+                    println!("[hit] vendor=fashionstar probe=0x{id:02X} feedback_id=0x{:X} model_code={model_code}", motor.feedback_id());
                 }
                 Err(MotorError::Timeout(_)) => {}
                 Err(e) => return Err(e.into()),

@@ -657,7 +657,7 @@ motor_cli \
 
 ## 11. Vendor = `fashionstar`
 
-CAN (`model=fashionstar`, including UC-06 via `transport=uc06`) or native UART/RS-485 (`model=uart`, `transport=uart`). ServoID 0..254; `feedback_id=0x321` is an interface placeholder for UART. Supports POS_VEL, hold/release output, stop, zero, raw integer registers, position/status/temperature/current queries and estimated velocity feedback. `torq` carries current in A. CAN/UART ID and baud changes take effect immediately; other CAN configuration follows the power-cycle procedure. Continuous velocity and MIT/quantitative torque are currently unsupported. See [FASHIONSTAR_API.md](FASHIONSTAR_API.md) for arguments and examples.
+CAN (`model=fashionstar`, including UC-06 via `transport=uc06`) or native UART/RS-485 (`model=uart`, `transport=uart`). ServoID 0..254; CAN and UART both ignore `feedback_id`; pass `0`. Supports POS_VEL, hold/release output, stop, zero, raw integer registers, position/status/temperature/current queries and estimated velocity feedback. `torq` carries current in A. CAN/UART ID and baud changes take effect immediately; other CAN configuration follows the power-cycle procedure. Continuous velocity and MIT/quantitative torque are currently unsupported. See [FASHIONSTAR_API.md](FASHIONSTAR_API.md) for arguments and examples.
 
 ## 12. Practical Notes
 

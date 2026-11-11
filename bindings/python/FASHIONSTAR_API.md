@@ -11,7 +11,7 @@ from motorbridge import Controller
 
 ctrl = Controller("can0")
 try:
-    motor = ctrl.add_fashionstar_motor(0, 0x321, "fashionstar")
+    motor = ctrl.add_fashionstar_motor(motor_id=0, feedback_id=0, model="fashionstar")
     try:
         motor.send_pos_vel(1.5707963, 1.0)  # rad, rad/s
         motor.request_feedback()
@@ -27,7 +27,7 @@ finally:
 
 This cleanup closes the connection. The existing `with Controller(...)` also calls `shutdown()` on exit, releasing servo output. Position queried after `request_feedback()` may still be in transit; it does not confirm arrival.
 
-- `add_fashionstar_motor(motor_id, feedback_id, model)`: ServoID 0..254; `fashionstar` selects CAN and `uart` selects UART/RS-485.
+- `add_fashionstar_motor(motor_id, feedback_id, model)`: ServoID 0..254; the driver ignores `feedback_id`; pass `0`. `fashionstar` selects CAN and `uart` selects UART/RS-485.
 - Use existing `enable()` (stop and hold), `disable()`, `set_zero_position()`, `send_pos_vel(pos, vlim)`, `get_register_u32(rid, timeout_ms)`, `write_register_u32(rid, value)`.
 - `ensure_mode(Mode.POS_VEL)` is available. VEL, MIT/quantitative torque and FORCE_POS are currently unsupported; operations without a protocol mapping return errors.
 - `vel` is estimated from consecutive position samples; `torq` carries current in A (`0x11` in mA divided by 1000), following MyActuator's mapping; `t_mos` is servo temperature in °C using the official CAN tool's default conversion. The first velocity sample, invalid temperature readings and rotor temperature are `NaN`. `torq` does not represent torque in N·m.
@@ -47,13 +47,13 @@ Python CLI modes: `enable`, `disable`, `pos-vel`, `zero`, `set-zero`, `ping`, `r
 
 ## Native UART/RS-485
 
-Use `Controller.from_uart()` with `model="uart"` and the existing `feedback_id=0x321` placeholder; the factory defaults to 115200 baud. Motor methods, units and parameter IDs remain the same: ID configuration uses `0x81`, model query uses `0x01`. The driver translates to native UART addresses; see [UART parameters](../../motor_cli/FASHIONSTAR_API.md#6-native-uartrs-485).
+Use `Controller.from_uart()` with `model="uart"` and `feedback_id=0` (ignored by the driver); the factory defaults to 115200 baud. Motor methods, units and parameter IDs remain the same: ID configuration uses `0x81`, model query uses `0x01`. The driver translates to native UART addresses; see [UART parameters](../../motor_cli/FASHIONSTAR_API.md#6-native-uartrs-485).
 
 Use the SDK example above with these controller and motor constructors; keep the same cleanup:
 
 ```python
 ctrl = Controller.from_uart("/dev/ttyUSB0", 115200)
-motor = ctrl.add_fashionstar_motor(0, 0x321, "uart")
+motor = ctrl.add_fashionstar_motor(motor_id=0, feedback_id=0, model="uart")
 ```
 
 ```bash
@@ -67,7 +67,7 @@ Use `Controller.from_uc06(serial_port, can_bitrate)` with model `fashionstar`. T
 
 ```python
 ctrl = Controller.from_uc06("/dev/ttyUSB0", 1000000)
-motor = ctrl.add_fashionstar_motor(0, 0x321, "fashionstar")
+motor = ctrl.add_fashionstar_motor(motor_id=0, feedback_id=0, model="fashionstar")
 ```
 
 Keep the SDK cleanup shown above. All existing FashionStar CAN motor methods apply.

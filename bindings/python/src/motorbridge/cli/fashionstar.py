@@ -26,10 +26,8 @@ def _fashionstar_controller(args: argparse.Namespace):
 def _run_fashionstar(args: argparse.Namespace) -> None:
     if args.mode not in ("enable", "disable", "pos-vel", "zero", "set-zero", "ping", "read-param", "write-param"):
         raise ValueError(f"FashionStar mode {args.mode} is not currently supported")
-    motor_id = _parse_unsigned(args.motor_id, "motor_id", 254)
+    motor_id = _parse_unsigned(args.motor_id, "motor_id", 0xFFFF)
     feedback_id = _parse_unsigned(args.feedback_id, "feedback_id", 0xFFFF)
-    if feedback_id != 0x321:
-        raise ValueError("FashionStar CAN arbitration ID is fixed at 0x321")
     if args.mode in ("ping", "read-param"):
         timeout_ms = _parse_unsigned(str(args.timeout_ms), "timeout_ms")
     if args.mode in ("read-param", "write-param"):

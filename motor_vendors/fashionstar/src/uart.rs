@@ -400,11 +400,23 @@ mod tests {
     }
 
     #[test]
+    fn feedback_id_does_not_change_uart_communication() {
+        for feedback_id in [0, 1, CAN_ID, CAN_ID + 1, u16::MAX] {
+            let (controller, commands, _) = setup();
+            let motor = controller.add_motor(0, feedback_id, "uart").unwrap();
+            motor.enable().unwrap();
+            assert_eq!(commands.recv().unwrap().data, [0x18, 0, 0x11, 0, 0]);
+            assert_eq!(motor.feedback_id(), CAN_ID);
+            controller.close_bus().unwrap();
+        }
+    }
+
+    #[test]
     fn uart_commands_and_invalid_arguments() {
         let (controller, commands, _) = setup();
         assert!(controller.add_motor(255, 0, "uart").is_err());
         assert!(controller.add_motor(0, 0, "fashionstar").is_err());
-        let motor = controller.add_motor(0, CAN_ID, "uart").unwrap();
+        let motor = controller.add_motor(0, 0, "uart").unwrap();
         motor
             .send_cmd_pos_vel(-std::f32::consts::PI, std::f32::consts::PI)
             .unwrap();
@@ -491,7 +503,7 @@ mod tests {
     #[test]
     fn uart_reads_use_common_parameter_ids() {
         let (controller, commands, replies) = setup();
-        let motor = controller.add_motor(0, CAN_ID, "uart").unwrap();
+        let motor = controller.add_motor(0, 0, "uart").unwrap();
         assert_eq!(motor.motor_id(), 0);
         assert_eq!(motor.feedback_id(), CAN_ID);
         for (rid, request, response, expected) in [

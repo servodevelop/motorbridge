@@ -38,7 +38,12 @@ struct CanMotor {
 }
 
 impl CanMotor {
-    pub fn new(motor_id: u16, feedback_id: u16, model: &str, bus: Arc<dyn CanBus>) -> Result<Self> {
+    pub fn new(
+        motor_id: u16,
+        _feedback_id: u16,
+        model: &str,
+        bus: Arc<dyn CanBus>,
+    ) -> Result<Self> {
         if model == "uart" {
             return Err(MotorError::InvalidArgument(
                 "model=uart requires a native UART controller".to_string(),
@@ -47,11 +52,6 @@ impl CanMotor {
         if motor_id > 254 {
             return Err(MotorError::InvalidArgument(
                 "FashionStar ServoID must be 0..254".to_string(),
-            ));
-        }
-        if feedback_id != CAN_ID {
-            return Err(MotorError::InvalidArgument(
-                "FashionStar feedback_id is fixed at 0x321".to_string(),
             ));
         }
         Ok(Self {

@@ -39,11 +39,11 @@
 - `add_myactuator_motor(motor_id, feedback_id, model)`
 - `add_robstride_motor(motor_id, feedback_id, model)`
 - `add_hightorque_motor(motor_id, feedback_id, model)`
-- `add_fashionstar_motor(motor_id, feedback_id, model)`
+- `add_fashionstar_motor(motor_id, feedback_id, model)`：`feedback_id` 由驱动忽略，填 `0` 即可。
 
-FashionStar 原生 UART/RS-485 使用 `Controller::from_uart(serial_port, baud)`（默认波特率 115200），再调用 `add_fashionstar_motor(motor_id, 0x321, "uart")`。
+FashionStar 原生 UART/RS-485 使用 `Controller::from_uart(serial_port, baud)`（默认波特率 115200），再调用 `add_fashionstar_motor(motor_id, 0, "uart")`。
 
-UC-06 CAN/USB 转接板使用 `Controller::from_uc06(serial_port, can_bitrate)`（默认 CAN 速率 1000000 bit/s），再调用 `add_fashionstar_motor(motor_id, 0x321, "fashionstar")`；USB 串口固定 1 Mbps。
+UC-06 CAN/USB 转接板使用 `Controller::from_uc06(serial_port, can_bitrate)`（默认 CAN 速率 1000000 bit/s），再调用 `add_fashionstar_motor(motor_id, 0, "fashionstar")`；USB 串口固定 1 Mbps。
 
 ## 快速开始
 

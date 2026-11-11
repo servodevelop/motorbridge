@@ -8,7 +8,7 @@
 
 - 厂商标识：`fashionstar`。默认型号 `fashionstar` 使用 CAN，型号 `uart` 使用原生 UART/RS-485。以下 CAN 设置适用于默认型号。
 - 经典 CAN，收发均使用标准 11-bit 仲裁 ID **0x321**。`motor_id` 是数据区的 ServoID，范围 **0..254**；不接受 255 作为单电机 ID。
-- `feedback_id` 固定为 `0x321`（801），与 ServoID 无关。
+- `feedback_id` 由驱动忽略，填 `0` 即可；CAN 报文的仲裁 ID 由厂商驱动按协议填写，与此参数无关。
 - 链路：`auto`、`socketcan`、`mcu-serial`、`uc06`。MCU 固件使用 motorbridge 已有串口协议；UC-06 使用专用串口封装，通过 `--transport uc06` 接入（见第 7 节）。
 - 主机与舵机波特率必须一致，官方默认值为 500 kbit/s。Linux 先配置 `can0`；PCAN 可指定 `can0@500000`。
 
@@ -34,7 +34,7 @@
 | 参数 | 默认值 | 含义 |
 |---|---|---|
 | `--motor-id` | 1 | ServoID，0..254 |
-| `--feedback-id` | `0x321` | 固定仲裁 ID |
+| `--feedback-id` | `0x321` | 保留统一接口参数，驱动忽略此值 |
 | `--pos` | 0 | 绝对目标位置，rad，范围 ±1024 圈 |
 | `--vlim` | 1 | 正速度限制，rad/s，取整后为 1..65535 个 0.1°/s |
 | `--timeout-ms` | 500 | 等待回包超时；保护区解锁等待另计 |
@@ -73,7 +73,7 @@ Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONST
 
 使用 `--vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200`。波特率需匹配舵机配置；UART 工厂方法默认 115200，CLI 串口参数保留原有默认值。链路为 8-N-1、无流控，适配器需自动处理半双工收发方向。
 
-`motor_id` 仍为 ServoID，范围 0..254。`feedback_id=0x321` 仅作为接口占位值；UART 没有 CAN 仲裁 ID 或独立反馈地址。扫描、改 ID、控制、状态读取和参数流均沿用现有操作。
+`motor_id` 仍为 ServoID，范围 0..254。`feedback_id` 由驱动忽略，填 `0` 即可；UART 没有 CAN 仲裁 ID 或独立反馈地址。扫描、改 ID、控制、状态读取和参数流均沿用现有操作。
 
 参数接口保留 FashionStar 现有编号，由驱动内部转换：型号 `0x01`、固件 `0x02`、序号 `0x03/0x04`、状态 `0x10..0x18`、配置 `0x80..0x89`、`0x8B`、`0x8C`、`0x8E..0x93`。这些是 motorbridge 参数编号，不是 UART 原生地址；例如 `0x81` 映射到 UART 的 ID 参数 34。`0x82` 波特率索引使用 UART 的 1..8（9600、19200、38400、57600、115200、250000、500000、1000000）。没有对应 UART 功能的 CAN 参数返回不支持。UART 的 ID 和波特率修改立即生效并在断电后保留；需关闭旧连接，按新配置重新创建连接，当前句柄不会自动切换。UART `set_id` 返回 `verified:false`、`requires_power_cycle:false`，可用新 ID 调用 `verify` 确认结果。
 
@@ -83,7 +83,7 @@ Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONST
 motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode status
 ```
 
-WS 使用相同操作和参数编号。设置 `model:"uart"`、`transport:"uart"`、`serial_port` 和 `serial_baud:115200`；`feedback_id` 使用 801 或省略。
+WS 使用相同操作和参数编号。设置 `model:"uart"`、`transport:"uart"`、`serial_port` 和 `serial_baud:115200`；`feedback_id` 使用 0 或省略。目标信息回显输入值；状态和扫描结果的实际通信标识取自驱动。
 
 ## 7）UC-06 USB 转 CAN
 
@@ -95,7 +95,7 @@ USB 串口固定 1000000 baud、8-N-1，UC-06 不使用 `--serial-baud`。`--can
 motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --motor-id 0 --mode status
 ```
 
-Rust 使用 `FashionstarController::new_uc06(port, can_bitrate)`；C 使用 `motor_controller_new_uc06(port, can_bitrate)`；Python/C++ 使用 `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`，再添加 `fashionstar` 型号，反馈 ID 使用 `0x321`。WS 的 `set_target`、`scan`、`set_id`、`verify` 接受 `transport:"uc06"`、`serial_port` 和 `can_bitrate`。
+Rust 使用 `FashionstarController::new_uc06(port, can_bitrate)`；C 使用 `motor_controller_new_uc06(port, can_bitrate)`；Python/C++ 使用 `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`，再添加 `fashionstar` 型号，反馈 ID 填 `0`，驱动忽略该参数。WS 的 `set_target`、`scan`、`set_id`、`verify` 接受 `transport:"uc06"`、`serial_port` 和 `can_bitrate`。
 
 ## 8）协议来源
 

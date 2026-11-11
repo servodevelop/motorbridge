@@ -728,7 +728,7 @@ motor_cli \
 
 ## 11. 厂商 = `fashionstar`
 
-CAN（`model=fashionstar`，UC-06 使用 `transport=uc06`）或原生 UART/RS-485（`model=uart`、`transport=uart`）。ServoID 0..254；`feedback_id=0x321` 在 UART 中仅作接口占位。支持 POS_VEL、锁力/卸力、停止、设零、整数寄存器、位置/状态/温度/电流查询与估算速度反馈；`torq` 表示电流 A；CAN/UART 的 ID、波特率修改立即生效；其他 CAN 配置按重新上电流程处理。连续速度与 MIT/定量力矩暂不支持。参数和命令示例见 [FASHIONSTAR_API.zh-CN.md](FASHIONSTAR_API.zh-CN.md)。
+CAN（`model=fashionstar`，UC-06 使用 `transport=uc06`）或原生 UART/RS-485（`model=uart`、`transport=uart`）。ServoID 0..254；CAN/UART 均忽略 `feedback_id`，填 `0` 即可。支持 POS_VEL、锁力/卸力、停止、设零、整数寄存器、位置/状态/温度/电流查询与估算速度反馈；`torq` 表示电流 A；CAN/UART 的 ID、波特率修改立即生效；其他 CAN 配置按重新上电流程处理。连续速度与 MIT/定量力矩暂不支持。参数和命令示例见 [FASHIONSTAR_API.zh-CN.md](FASHIONSTAR_API.zh-CN.md)。
 
 ## 12. 实用建议
 
