@@ -167,7 +167,8 @@ impl CanMotor {
     }
 
     /// Writes configuration without assuming that it is already active.
-    /// Device configuration changes take effect after a power cycle.
+    /// ServoID/bitrate changes take effect without a power cycle; wait 120 ms
+    /// before reconnecting with the new settings. Other configuration follows the power-cycle procedure.
     pub fn write_register_u32(&self, rid: u8, value: u32) -> Result<()> {
         registers::validate_write(rid, value)?;
         self.with_register_access(rid, || {
@@ -180,7 +181,7 @@ impl CanMotor {
     }
 
     /// POS_VEL maps to speed-based position mode (native mode 2).
-    /// Preserve the device's configured power and acceleration settings.
+    /// Use the official tool's 20 ms acceleration/deceleration, preserving power.
     pub fn send_cmd_pos_vel(&self, target_position: f32, velocity_limit: f32) -> Result<()> {
         let target = protocol::angle_raw(target_position)?;
         let speed = protocol::speed_raw(velocity_limit)?;
@@ -188,6 +189,8 @@ impl CanMotor {
         self.write(0x52, 2)?;
         self.write(0x53, target)?;
         self.write(0x58, u32::from(speed))?;
+        self.write(0x56, 20)?;
+        self.write(0x57, 20)?;
         self.write(0x59, 1)
     }
 

@@ -1,5 +1,6 @@
 use crate::motor::FashionstarMotor;
 use crate::uart_serial::FashionstarUartBus;
+use crate::uc06::Uc06Bus;
 use motor_core::bus::{open_can_bus, CanBus, UartFrame};
 use motor_core::controller::CoreController;
 use motor_core::error::Result;
@@ -49,6 +50,10 @@ impl FashionstarController {
                 transactions: Arc::new(FairMutex::new(())),
             },
         }
+    }
+
+    pub fn new_uc06(port: &str, can_bitrate: u32) -> Result<Self> {
+        Ok(Self::new(Arc::new(Uc06Bus::open(port, can_bitrate)?)))
     }
 
     pub fn add_motor(
@@ -188,11 +193,13 @@ mod tests {
             .send_cmd_pos_vel(-std::f32::consts::PI, std::f32::consts::PI)
             .unwrap();
         let sent = bus.sent.lock().unwrap();
-        assert_eq!(sent.len(), 4);
+        assert_eq!(sent.len(), 6);
         assert_eq!(&sent[0].data[..5], &[b'w', 0, 0x52, 2, 0]);
         assert_eq!(sent[1].data, [b'W', 0, 0x53, 0xf8, 0xf8, 0x54, 0xff, 0xff]);
         assert_eq!(&sent[2].data[..5], &[b'w', 0, 0x58, 8, 7]);
-        assert_eq!(&sent[3].data[..5], &[b'w', 0, 0x59, 1, 0]);
+        assert_eq!(&sent[3].data[..5], &[b'w', 0, 0x56, 20, 0]);
+        assert_eq!(&sent[4].data[..5], &[b'w', 0, 0x57, 20, 0]);
+        assert_eq!(&sent[5].data[..5], &[b'w', 0, 0x59, 1, 0]);
         drop(sent);
         motor
             .request_motor_feedback(Duration::from_secs(1))
