@@ -10,6 +10,20 @@
 - On Windows (PCAN backend), `can0/can1` map to `PCAN_USBBUS1/2`; optional `@bitrate` suffix is supported.
 
 
+## FashionStar UC-06 CAN/USB Adapter
+
+<img src="https://fashionstar.com.cn/wiki/servo-parts/boards/images/uc-06-primary.webp" alt="FashionStar UC-06 CAN/USB adapter" width="320">
+
+[UC-06 specifications and image source](https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/): Type-C USB, 8.0–25.2 V external power input, CAN up to 1 Mbps, and a switchable 120 Ω termination resistor. The computer sees a serial port; select `uc06` with model `fashionstar`. Existing PCAN/CANable paths continue to use `socketcan`.
+
+USB serial runs at 1 Mbps. `--can-bitrate` configures the adapter's CAN interface independently (default 1000000 bit/s); match the servo's current bitrate. It does not change servo parameters.
+
+```bash
+motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --mode scan --start-id 0 --end-id 10
+```
+
+See the [FashionStar API reference](../../motor_cli/FASHIONSTAR_API.md#7-uc-06-usb-to-can) for supported CAN rates and SDK usage.
+
 ## Support Landscape
 
 ```mermaid

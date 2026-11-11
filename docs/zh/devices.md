@@ -5,10 +5,24 @@
 
 - Linux SocketCAN 直接使用已初始化的接口名：`can0`、`can1`。CANable 请刷 candleLight/gs_usb 固件，让系统识别为 `can0` 这类 SocketCAN 接口。
 - 标准 CAN 推荐 PCAN 或 CANable candleLight/gs_usb。
-- 仅 Damiao 提供串口桥链路（CLI）：`--transport dm-serial --serial-port /dev/ttyACM0 --serial-baud 921600`。
+- Damiao 串口桥链路（CLI）：`--transport dm-serial --serial-port /dev/ttyACM0 --serial-baud 921600`。
 - Linux SocketCAN 下 `--channel` 不要带 `@bitrate`（例如 `can0@1000000` 无效）。
 - Windows（PCAN 后端）中，`can0/can1` 映射到 `PCAN_USBBUS1/2`，可选 `@bitrate` 后缀。
 
+
+## FashionStar UC-06 CAN/USB 转接板
+
+<img src="https://fashionstar.com.cn/wiki/servo-parts/boards/images/uc-06-primary.webp" alt="FashionStar UC-06 CAN/USB 转接板" width="320">
+
+[UC-06 官方规格及图片来源](https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/)：Type-C USB 接口、8.0～25.2 V 外部电源输入、最高 1 Mbps CAN 速率，带可切换的 120 Ω 终端电阻。电脑识别为串口，使用 `uc06` 传输和 `fashionstar` 型号；原有 PCAN/CANable 路径继续使用 `socketcan`。
+
+USB 串口固定 1 Mbps。`--can-bitrate` 独立设置转接板的 CAN 速率，默认 1000000 bit/s，需匹配舵机当前速率；该选项不修改舵机参数。
+
+```bash
+motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --mode scan --start-id 0 --end-id 10
+```
+
+支持的 CAN 速率和 SDK 用法见 [FashionStar API 参考](../../motor_cli/FASHIONSTAR_API.zh-CN.md#7uc-06-usb-转-can)。
 
 ## 支持全景图
 

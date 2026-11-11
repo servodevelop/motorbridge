@@ -170,6 +170,7 @@ files there when new hardware photos become available.
 | [Damiao USB2CANFD](media/adapters/dm-usb2canfd.jpg) | `dm-device` | Damiao-only DM_Device SDK path, one SDK channel | <img src="media/adapters/dm-usb2canfd.jpg" alt="Damiao USB2CANFD adapter" width="160"> |
 | [Damiao USB2CANFD_DUAL](media/adapters/dm-usb2canfd-dual.jpg) | `dm-device` | Damiao-only DM_Device SDK path, SDK channels `0` and `1` | <img src="media/adapters/dm-usb2canfd-dual.jpg" alt="Damiao USB2CANFD Dual adapter" width="160"> |
 | [Damiao LINKX4C](media/adapters/DM-LinkX-4C.jpg) | `dm-device` | Damiao-only DM_Device SDK path, SDK channels `0..3` | <img src="media/adapters/DM-LinkX-4C.jpg" alt="Damiao LINKX4C adapter" width="160"> |
+| [FashionStar UC-06](https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/) | `uc06` | FashionStar CAN over USB serial; Type-C, CAN up to 1 Mbps, switchable 120 Ω termination | <img src="https://fashionstar.com.cn/wiki/servo-parts/boards/images/uc-06-primary.webp" alt="FashionStar UC-06 CAN/USB adapter" width="160"> |
 
 ## Current Vendor Support
 
@@ -203,7 +204,7 @@ files there when new hardware photos become available.
 - FashionStar:
   - models: `fashionstar` (CAN), `uart` (native UART/RS-485)
   - modes: `scan`, `ping`, `status`, `enable`, `disable`, `stop`, `pos-vel`, `zero`, parameter read/write; ID changes use `--set-motor-id`
-  - note: CAN configuration requires a power cycle; UART ID/baud changes take effect immediately; VEL, MIT/quantitative torque and FORCE_POS are currently unsupported
+  - note: CAN/UART ID and baud changes take effect immediately; other CAN configuration follows the power-cycle procedure; VEL, MIT/quantitative torque and FORCE_POS are currently unsupported
 
 ## RobStride Protocol Paths
 
