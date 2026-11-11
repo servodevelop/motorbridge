@@ -3,9 +3,9 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FashionStar CAN 与 UART/RS-485 舵机在 motorbridge 中的功能交付、main 分支差异、统一接口及软件验收结果。">
+  <meta name="description" content="FashionStar 接入验收报告 v2：CAN 与 UART/RS-485 双协议交付，USB CAN 与 UC-06 接入指南，多舵机真机测试及统一接口使用示例。">
   <meta name="color-scheme" content="light">
-  <title>FashionStar 舵机接入工作验收报告 · motorbridge</title>
+  <title>FashionStar 舵机接入验收报告 v2 · 使用指南与真机成果 · motorbridge</title>
   <style>
     :root { --ink:#111827; --muted:#17202a; --line:#d8e2e8; --paper:#fff; --wash:#f3f6f8; --accent:#176552; --soft:#eaf4ef; --navy:#163649; }
     * { box-sizing:border-box; }
@@ -61,7 +61,7 @@
     .state th:nth-child(2) { width:18%; }
     code { font: .95em/1.55 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; background:#edf2f5; color:#000; padding:2px 4px; border-radius:3px; overflow-wrap:anywhere; }
     thead code { color:inherit; background:#ffffff16; }
-    .ok { display:inline-block; padding:1px 7px; border-radius:3px; background:var(--soft); color:var(--accent); font-size:13px; font-weight:650; white-space:nowrap; }
+    .ok { display:inline-block; padding:1px 7px; border-radius:3px; background:var(--soft); color:var(--accent); font-size:13px; font-weight:650; white-space:normal; }
     .cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
     .panel { border:1px solid var(--line); padding:18px 21px; min-width:0; }
     .panel h3 { margin:0 0 10px; font-size:17px; }
@@ -77,10 +77,6 @@
     .diagram .branch b { display:block; color:var(--accent); }
     .diagram .branch span { display:block; margin-top:5px; color:var(--muted); font-size:14px; }
     .diagram figcaption { text-align:left; font-size:14px; color:#000; margin-top:13px; }
-    .steps { list-style:none; padding:0; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; counter-reset:step; }
-    .steps li { margin:0; color:#000; background:var(--wash); padding:13px 14px; font-size:14px; }
-    .steps li::before { counter-increment:step; content:"0" counter(step); display:block; margin-bottom:5px; color:var(--accent); font:700 14px/1.3 ui-monospace,Consolas,monospace; }
-    .steps b { display:block; font-size:14px; }
     pre { margin:10px 0 0; padding:16px 18px; background:#f0f4f6; color:#000; border-left:3px solid #7895a4; font-size:14px; line-height:1.7; overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
     pre code { padding:0; background:transparent; font-size:inherit; }
     .evidence td:last-child { width:80px; white-space:nowrap; }
@@ -104,7 +100,6 @@
       main { padding:0 22px 24px; }
       footer { margin:0 22px; flex-direction:column; gap:4px; }
       .cols,.refs { grid-template-columns:1fr; }
-      .steps { grid-template-columns:1fr 1fr; }
       .matrix { min-width:690px; }
       .diagram { padding:14px; }
       .diagram .branches { gap:10px; }
@@ -136,7 +131,7 @@
       tr { break-inside:avoid; }
       .table-wrap { overflow:visible; }
       .matrix { min-width:0; }
-      .panel,.summary,.metrics,.diagram,.steps,.conclusion,pre,.meta { break-inside:avoid; }
+      .panel,.summary,.metrics,.diagram,.conclusion,pre,.meta { break-inside:avoid; }
       .panel { padding:12px 14px; }
       .panel p,.panel li { font-size:10pt; }
       .small,.refs,.diagram figcaption { font-size:9.5pt; }
@@ -147,63 +142,137 @@
       a { color:inherit; }
       footer { margin:20px 0 0; font-size:9.5pt; padding-bottom:0; }
     }
+
+    .cover { background:linear-gradient(135deg,#fff 55%,#edf6f2); }
+    .cover-title { display:flex; justify-content:space-between; align-items:flex-start; gap:20px; }
+    .version { flex:0 0 auto; display:block; padding:10px 18px; border:2px solid var(--navy); color:var(--navy); font:750 30px/1.1 ui-monospace,Consolas,monospace; letter-spacing:-.05em; }
+    .version small { display:block; margin-top:7px; font:600 11px/1.4 ui-monospace,Consolas,monospace; letter-spacing:.08em; }
+    .proof-line { margin-top:18px; font-weight:600; color:#144735; }
+    .journey { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; list-style:none; padding:0; }
+    .journey li { margin:0; padding:20px 22px; background:#f4f8f9; color:#000; border-top:3px solid var(--accent); }
+    .journey .stage { display:block; margin-bottom:8px; font:700 13px/1.4 ui-monospace,Consolas,monospace; color:#16533f; letter-spacing:.08em; }
+    .journey h3 { margin:0 0 8px; }
+    .journey p { margin:0; font-size:14px; }
+    .route-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0; }
+    .route-card { display:block; padding:20px; border:1px solid #b7cbd2; color:var(--ink); background:#fff; text-decoration:none; }
+    .route-card:hover { border-color:var(--accent); text-decoration:none; background:#f4faf7; }
+    .route-card b { display:block; font-size:18px; margin:6px 0 8px; }
+    .route-card span { font-size:14px; display:block; color:#000; }
+    .route-tag { color:#164f3e !important; font:700 12px/1.4 ui-monospace,Consolas,monospace !important; letter-spacing:.06em; }
+    .guide-route { margin-top:30px; padding-top:10px; border-top:1px solid var(--line); }
+    .guide-route h3 { margin-top:10px; font-size:20px; }
+    @media screen and (max-width:760px) { .code-block pre { white-space:pre; overflow-wrap:normal; } }
+    h4 { margin:24px 0 9px; font-size:16px; line-height:1.65; color:var(--ink); }
+    .expect { padding-left:13px; border-left:3px solid var(--accent); }
+    .expect strong { color:#154d3a; }
+    kbd { color:#000; background:#edf2f5; border:1px solid #b8c8d2; border-radius:3px; padding:1px 5px; font: .9em ui-monospace,Consolas,monospace; }
+    @media print { h4 { font-size:10.5pt; break-after:avoid; } }
+    .wiring { padding:12px 16px; border-left:3px solid var(--accent); background:#f1f6f8; color:#000; font-weight:600; }
+    .code-block { margin:14px 0 20px; border:1px solid #bccdd6; border-radius:5px; overflow:hidden; }
+    .code-label { background:#dce8ee; color:#000; padding:8px 17px; font-size:13px; font-weight:700; border-bottom:1px solid #bccdd6; }
+    .code-block pre { margin:0; border:0; border-radius:0; padding:17px 18px; background:#f3f7fa; color:#000; tab-size:4; }
+    .code-block code { color:#000; }
+    .data-points { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); border:1px solid var(--line); margin:18px 0; }
+    .data-point { padding:18px; border-right:1px solid var(--line); }
+    .data-point:last-child { border-right:0; }
+    .data-point strong { display:block; color:var(--navy); font-size:26px; line-height:1.4; }
+    .data-point span { display:block; font-size:14px; color:#000; }
+    .refs a { text-decoration:underline; }
+    @media screen and (max-width:760px) {
+      .version { font-size:23px; padding:8px 12px; }
+      .route-cards,.journey { grid-template-columns:1fr; }
+      .route-card { padding:16px 18px; }
+      .data-points { grid-template-columns:1fr; }
+      .data-point { border-right:0; border-bottom:1px solid var(--line); padding:12px 16px; }
+      .data-point:last-child { border-bottom:0; }
+      .code-block pre { padding:13px; font-size:13px; }
+      .cover-title { flex-direction:column-reverse; align-items:flex-start; gap:14px; }
+      .version { display:flex; align-items:center; gap:12px; font-size:20px; }
+      .version small { margin-top:0; }
+      .diagram .branches { grid-template-columns:1fr; }
+      .meta div { gap:10px; }
+    }
+    @media (prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } }
+    @media print {
+      .cover { background:#fff; }
+      .version { font-size:22pt; }
+      .journey li,.route-card,.code-block,.data-points { break-inside:avoid; }
+      .code-label { font-size:9pt; }
+      .code-block pre { font-size:9pt; line-height:1.5; padding:11px 13px; }
+      .journey li { padding:12px 15px; }
+      .journey p,.route-card span { font-size:10pt; }
+      .data-point strong { font-size:19pt; }
+      .data-point span { font-size:9.5pt; }
+      .guide-route h3 { break-after:avoid; }
+      .wiring { break-after:avoid; font-size:10pt; }
+    }
   </style>
 </head>
 <body>
-  <div class="toolbar"><strong>motorbridge / 交付验收</strong><button type="button" onclick="window.print()" aria-label="打印报告或保存为 PDF">打印 / 保存 PDF</button></div>
+  <div class="toolbar"><strong>motorbridge / FashionStar 交付验收 · v2</strong><button type="button" onclick="window.print()" aria-label="打印报告或保存为 PDF">打印 / 保存 PDF</button></div>
   <article class="report">
     <header class="cover">
-      <p class="eyebrow">SOFTWARE DELIVERY &amp; ACCEPTANCE REPORT</p>
-      <h1>FashionStar 舵机接入<br>工作验收报告</h1>
-      <p class="subtitle">CAN 与 UART/RS-485 双协议统一接入</p>
+      <p class="eyebrow">ENGINEERING DELIVERY · ACCEPTANCE · USER GUIDE</p>
+      <div class="cover-title"><div><h1>FashionStar 舵机接入<br>工作验收报告</h1><p class="subtitle">双协议统一接入 · 三种连接方案 · 多舵机真机验证</p></div><span class="version" aria-label="报告版本 v2">v2<small>2026.11</small></span></div>
       <dl class="meta">
-        <div><dt>项目</dt><dd>motorbridge · FashionStar 供应商接入</dd></div>
-        <div><dt>报告日期</dt><dd><time datetime="2026-11-11">2026 年 11 月 11 日</time></dd></div>
+        <div><dt>项目</dt><dd>motorbridge · FashionStar</dd></div>
+        <div><dt>报告版本</dt><dd>v2 · <time datetime="2026-11-11">2026 年 11 月 11 日</time></dd></div>
         <div><dt>比较基线</dt><dd><code>main</code> · <code>4741f28</code></dd></div>
         <div><dt>交付分支</dt><dd><code>feat/fashionstar-unified</code></dd></div>
-        <div><dt>验收内容</dt><dd>协议驱动、统一接口、功能映射、软件验证与使用文档</dd></div>
+        <div><dt>验收内容</dt><dd>协议驱动、适配器接入、统一接口、真机验证与使用指南</dd></div>
         <div><dt>交付接口</dt><dd>Rust、C ABI、Python、C++、WebSocket</dd></div>
       </dl>
-      <p class="lead">本次工作将 <strong>FashionStar CAN 舵机与原生 UART/RS-485 舵机</strong>接入 motorbridge，建立统一的设备发现、位置运动控制、状态采集、参数配置和应用调用链路。上层使用同一组电机操作接口，底层由 FashionStar 驱动完成两种协议的编码、通信、解析与单位转换。</p>
+      <p class="lead">本次工作将 <strong>FashionStar CAN 与 UART/RS-485 舵机</strong>接入 motorbridge，并贯通<strong>原生串口、标准 USB CAN、UC-06 串口转 CAN</strong>三种连接方案。从协议核对、功能映射到多设备协同与真机回归，形成可直接用于设备发现、位置控制、持续反馈和参数管理的完整应用链路。</p>
       <div class="metrics" aria-label="交付要点">
-        <div class="metric"><b>2 条</b><span>CAN / UART 协议路径</span></div>
-        <div class="metric"><b>POS_VEL</b><span>统一位置与速度上限控制</span></div>
-        <div class="metric"><b>242 项</b><span>Rust 工作区测试通过</span></div>
+        <div class="metric"><b>2 类协议</b><span>CAN 与 UART/RS-485</span></div>
+        <div class="metric"><b>3 种接入</b><span>UART · USB CAN · UC-06</span></div>
+        <div class="metric"><b>244 项</b><span>Rust 工作区测试通过</span></div>
         <div class="metric"><b>15 项</b><span>Python 接口与环境测试通过</span></div>
       </div>
+      <p class="proof-line">双机独立寻址 · 多圈与限速运动 · 电流与温度采集 · 即时配置切换 · 断电保存验证</p>
     </header>
-
     <nav aria-label="报告目录">
-      <a href="#delta">01 与 main 的差异</a><a href="#capabilities">02 功能验收矩阵</a><a href="#protocols">03 协议与状态映射</a><a href="#integration">04 接口与接入方式</a><a href="#verification">05 软件验证结果</a><a href="#delivery">06 交付清单与结论</a>
+      <a href="#delta">01 交付增量</a><a href="#journey">02 实施成果</a><a href="#capabilities">03 功能矩阵</a><a href="#protocols">04 协议映射</a><a href="#guide">05 使用指南</a><a href="#integration">06 应用集成</a><a href="#verification">07 验收数据</a><a href="#delivery">08 交付清单</a>
     </nav>
-
     <main>
       <section id="delta">
         <h2><span class="num">01</span>与 main 的差异：新增了什么</h2>
-        <p>以项目 <code>main@4741f28</code> 为基线，本分支新增 FashionStar 供应商，并完成 CAN、UART 两个型号入口及配套集成。代码差异覆盖协议驱动、按帧类型复用的核心控制器、统一接口、命令行与 WebSocket 接入。</p>
+        <p>以项目 <code>main@4741f28</code> 为基线，本分支新增 FashionStar 供应商，完成 CAN、UART 两个型号入口、UC-06 适配器及配套集成。代码差异覆盖协议驱动、按帧类型复用的核心控制器、统一接口、命令行与 WebSocket 接入。</p>
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">交付维度</th><th scope="col">main 基线</th><th scope="col">本次交付</th></tr></thead>
           <tbody>
             <tr><th scope="row">厂商接入</th><td>既有厂商驱动与统一控制框架</td><td>新增 <code>fashionstar</code> 供应商；<code>model=fashionstar</code> 对应 CAN，<code>model=uart</code> 对应 UART/RS-485。</td></tr>
-            <tr><th scope="row">协议与传输</th><td>CAN、CAN-FD 及已有串口转 CAN 桥接</td><td>新增 FashionStar CAN 协议驱动与原生 UART/RS-485 串口传输；两条路径分别处理各自的报文结构。</td></tr>
+            <tr><th scope="row">协议与传输</th><td>CAN、CAN-FD 及已有串口转 CAN 桥接</td><td>新增 FashionStar CAN 协议、原生 UART/RS-485 和 UC-06 专用串口封装；CAN 协议复用于标准 USB CAN 与 UC-06。</td></tr>
             <tr><th scope="row">核心帧结构</th><td><code>CanFrame</code> 驱动的控制器与设备接口</td><td>核心按帧类型参数化，新增 <code>UartFrame</code>；沿用 <code>CanFrame</code> 的 8 字节数据结构。</td></tr>
             <tr><th scope="row">功能与状态</th><td>通用电机控制及反馈接口</td><td>接入 FashionStar 位置控制、速度上限、保持、卸力、置零、位置/速度/电流/温度/状态反馈及参数读写。</td></tr>
-            <tr><th scope="row">应用调用</th><td>Rust、C ABI、Python、C++ 与 WebSocket 调用体系</td><td>新增 FashionStar 电机创建入口与 UART 控制器入口；扩展 Rust/Python CLI、WS 扫描、控制、状态和参数流。</td></tr>
-            <tr><th scope="row">工程交付</th><td>既有构建、测试及文档体系</td><td>增加 FashionStar 协议与回归测试、双协议功能说明、中英文接口文档，并完成跨接口联调和 Windows 编译检查。</td></tr>
+            <tr><th scope="row">应用调用</th><td>Rust、C ABI、Python、C++ 与 WebSocket 调用体系</td><td>新增 FashionStar 电机创建入口、UART 与 UC-06 控制器入口；扩展 Rust/Python CLI、WS 扫描、控制、状态和参数流。</td></tr>
+            <tr><th scope="row">工程交付</th><td>既有构建、测试及文档体系</td><td>增加 FashionStar 协议与回归测试、双协议功能说明、中英文接口文档，完成跨接口联调、UART/CAN 双机真机测试及 Windows 编译检查。</td></tr>
           </tbody>
         </table></div>
-        <p class="small">比较口径：<code>git diff 4741f28 feat/fashionstar-unified</code>，以 main 基线核对交付分支的完整差异。</p>
+        <p class="small">以 <code>main@4741f28</code> 为比较基线，覆盖 FashionStar 驱动、类型化核心、三种连接方案与配套应用接口。</p>
+      </section>
+
+      <section id="journey">
+        <h2><span class="num">02</span>实施成果：从协议接入到工程交付</h2>
+        <p>接入工作围绕“统一接口可复用、设备行为可验证、现场操作可落地”展开，将厂商协议能力转化为 motorbridge 中一致的控制与数据服务。</p>
+        <ol class="journey">
+          <li><span class="stage">MILESTONE 01 / 协议梳理</span><h3>建立可执行的功能映射</h3><p>交叉核对 CAN/UART 协议、各语言 SDK 与官方网页工具，明确角度、速度、电流、温度及参数编号，完成位置控制、状态反馈、原点和配置操作的映射。</p></li>
+          <li><span class="stage">MILESTONE 02 / 双协议复用</span><h3>一次接入，沿用整套应用接口</h3><p>以 FashionStar 同一厂商下的 CAN、UART 型号承载协议差异；核心按帧类型复用，贯通 Rust、C ABI、Python、C++ 与 WebSocket，统一运动单位、参数访问及设备生命周期。</p></li>
+          <li><span class="stage">MILESTONE 03 / 传输扩展</span><h3>连接标准 CAN 与 UC-06 设备生态</h3><p>完成 UC-06 初始化、串口封装、CAN 速率选择、状态解析和多设备通信，复用现有 CAN 电机控制逻辑；用户按转接板选择连接入口即可调用相同功能。</p></li>
+          <li><span class="stage">MILESTONE 04 / 真机闭环</span><h3>用设备反馈完善控制与通信</h3><p>落实加减速参数、置零操作顺序、串口发送时序、并发访问与配置切换规则。通过多速度、多圈、双机、全速率和断电重连测试，逐项核对控制结果与配置保存。</p></li>
+        </ol>
+        <div class="summary"><strong>交付价值</strong><p>应用获得一致的设备操作方式，现场获得清晰的接线与命令步骤，维护人员获得完整的参数语义和可追溯的验收数据。</p></div>
       </section>
 
       <section id="capabilities">
-        <h2><span class="num">02</span>CAN 与 UART 功能验收矩阵</h2>
-        <p>两种协议均通过 <code>vendor=fashionstar</code> 接入，设备寻址范围为 <strong>ServoID 0–254</strong>。下表列出本次已实现的软件功能及其具体映射。</p>
+        <h2><span class="num">03</span>CAN 与 UART 功能验收矩阵</h2>
+        <p>CAN 功能同时适用于标准 USB CAN 与 UC-06。两种协议均通过 <code>vendor=fashionstar</code> 接入，设备寻址范围为 <strong>ServoID 0–254</strong>。下表列出本次已实现的软件功能及其具体映射。</p>
         <div class="table-wrap"><table class="matrix">
           <thead><tr><th scope="col">功能项</th><th scope="col">CAN 舵机实现</th><th scope="col">UART/RS-485 舵机实现</th><th scope="col">交付状态</th></tr></thead>
           <tbody>
             <tr><th scope="row">扫描与连通识别</th><td>遍历 ServoID，读取型号寄存器 <code>0x01</code>；提供 <code>scan</code>、<code>ping</code> 和 WS <code>verify</code>。</td><td>沿用同一操作流程，驱动将型号查询转换为原生 <code>0x03</code> 命令、参数地址 6。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">设备信息读取</th><td>读取型号、固件版本及序号；序号低/高字自动组合为 32 位值。</td><td>读取原生参数 6、7、8，并映射至相同的公共参数编号。</td><td><span class="ok">两条路径已实现</span></td></tr>
-            <tr><th scope="row">多圈位置控制</th><td><code>POS_VEL</code> 映射到原生模式 2，依次写入模式、目标角度、速度上限及执行寄存器。</td><td><code>POS_VEL</code> 映射到原生 <code>0x0F</code> 命令，一次发送目标角度和速度上限。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">多圈位置控制</th><td><code>POS_VEL</code> 映射到原生模式 2，依次写入模式、目标角度、速度上限、20 ms 加减速时间及执行寄存器。</td><td><code>POS_VEL</code> 映射到原生 <code>0x0F</code> 命令，一次发送目标角度和速度上限。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">行程与速度上限</th><td>绝对目标范围 ±1024 圈；角度与速度原始分辨率分别为 0.1°、0.1°/s。</td><td>使用相同的目标范围、单位和数值校验规则；长行程旋转通过设置远距离目标完成。</td><td><span class="ok">统一参数语义</span></td></tr>
             <tr><th scope="row">使能与停止保持</th><td><code>enable</code>、<code>stop</code> 写入 <code>0x7B=0x11</code>，保持当前位置。</td><td>发送 <code>0x18</code>，模式 <code>0x11</code>，保持当前位置。</td><td><span class="ok">两条路径已实现</span></td></tr>
             <tr><th scope="row">卸力</th><td><code>disable</code> 写入 <code>0x7B=0x10</code>，释放输出。</td><td>发送 <code>0x18</code>，模式 <code>0x10</code>，释放输出。</td><td><span class="ok">两条路径已实现</span></td></tr>
@@ -217,15 +286,16 @@
             <tr><th scope="row">WebSocket 集成</th><td>接入目标切换、扫描、控制、单次状态、状态流、参数流和改 ID。</td><td>复用同一组操作与公共参数编号，显式选择 <code>transport=uart</code>。</td><td><span class="ok">统一上层流程</span></td></tr>
           </tbody>
         </table></div>
-        <div class="summary"><strong>配置生效流程</strong><p>CAN 配置修改后重新上电；UART 的 ID 和波特率修改立即生效并在断电后保留。按新 ServoID 和通信速率建立连接，再读取型号及目标参数确认配置。位置运动、保持、卸力等运行控制按指令执行。</p></div>
+        <div class="summary"><strong>配置生效流程</strong><p>CAN 与 UART 的 ID、波特率修改均无需重新上电，并在断电后保留；CAN 写入后等待 120 ms，再按新 ID 和主机速率重连验证。其他 CAN 配置按重新上电流程处理。按新 ServoID 和通信速率建立连接，再读取型号及目标参数确认配置。位置运动、保持、卸力等运行控制按指令执行。</p></div>
       </section>
 
       <section id="protocols">
-        <h2><span class="num">03</span>协议实现与统一数据映射</h2>
+        <h2><span class="num">04</span>协议实现与统一数据映射</h2>
         <div class="cols">
           <div class="panel">
-            <h3>CAN：完整寄存器访问链路</h3>
+            <h3>CAN：寄存器访问与两类转接板</h3>
             <ul>
+              <li>标准 USB CAN 与 UC-06 共用 CAN 电机驱动；UC-06 完成 USB 串口与 CAN 报文转换。</li>
               <li>经典 CAN 标准帧，仲裁 ID 为 <code>0x321</code>，数据区携带 ServoID。</li>
               <li>实现单寄存器及双寄存器读写，组合多圈角度、序号等 32 位参数。</li>
               <li>实现运动参数块 <code>0x50–0x59</code> 的原始读写，覆盖时间、目标角度、功率、加减速时间、速度与执行控制。</li>
@@ -275,15 +345,323 @@
         <p class="small">UART 参数采用原生字节宽度。UART 的波特率索引 1–8 依次对应 9600、19200、38400、57600、115200、250000、500000、1000000 baud。</p>
       </section>
 
+      <section id="guide">
+        <h2><span class="num">05</span>首次使用：找到舵机，让它转动，再读取反馈</h2>
+        <p><strong>先完成下面的“准备”，再按手里的舵机和转接板选择 A、B、C 中的一条路线。</strong>每条路线都包含接线、扫描、读取状态、运动和卸力的完整命令。完成这条路线，即可掌握日常控制方法。</p>
+        <div class="route-cards">
+          <a class="route-card" href="#guide-uart"><span class="route-tag">A · UART / RS-485 舵机</span><b>用串口适配器连接</b><span>舵机本身使用 UART 或 RS-485 协议。<br>点击查看接线与操作步骤 →</span></a>
+          <a class="route-card" href="#guide-can"><span class="route-tag">B · CAN 舵机</span><b>用标准 USB CAN 连接</b><span>使用 PCAN、CANable 等适配器，Linux 中显示为 can0。<br>点击查看接线与操作步骤 →</span></a>
+          <a class="route-card" href="#guide-uc06"><span class="route-tag">C · CAN 舵机</span><b>用 UC-06 连接</b><span>使用 FashionStar UC-06，电脑上显示为 USB 串口。<br>点击查看接线与操作步骤 →</span></a>
+        </div>
+        <h3 id="guide-prepare">准备：生成命令行工具</h3>
+        <p>本教程以 <strong>Linux</strong> 为例。安装 Rust 工具链后，在终端进入 motorbridge 仓库根目录，也就是包含 <code>Cargo.toml</code> 的目录，执行：</p>
+<div class="code-block" id="guide-build"><div class="code-label">终端 · 构建 motor_cli</div><pre><code class="language-bash">cargo build --release -p motor_cli</code></pre></div>
+        <p class="expect"><strong>完成标志：</strong>终端出现 <code>Finished</code>，工具生成在 <code>target/release/motor_cli</code>。后续命令继续在这个仓库目录执行。</p>
+        <p>按步骤逐块复制命令。命令末尾的 <code>\</code> 表示下一行属于同一条命令，整块复制即可；手机上可左右滑动代码块查看完整命令。各路线的示例均使用 <strong>ServoID 0</strong>；ServoID 是舵机在总线上的设备编号，扫描后将 <code>--motor-id 0</code> 改为实际找到的编号。</p>
+        <div class="guide-route" id="guide-uart">
+          <h3>A. UART / RS-485 舵机</h3>
+          <h4>第 1 步 · 接线，确认电脑上的设备名称</h4>
+          <p class="wiring">电脑 USB → UART 或 RS-485 适配器 → 舵机；按舵机规格接通外部电源。</p>
+          <p>按舵机型号选择匹配的 UART 电平或 RS-485 适配器，并按接线图连接信号、参考地和电源。适配器应支持自动半双工收发，驱动使用 8-N-1 串口格式。</p>
+<div class="code-block" id="guide-uart-port"><div class="code-label">终端 · 查看 USB 串口名称</div><pre><code class="language-bash">ls /dev | grep -E &#x27;^(ttyUSB|ttyACM)&#x27;</code></pre></div>
+<p>例如输出 <code>ttyUSB0</code>，对应的完整端口名就是 <code>/dev/ttyUSB0</code>。有多个端口时，可对比插入转接板前后的列表，找到新增的一项。</p>
+<p>本路线以 <code>/dev/ttyUSB0</code>、<strong>115200 baud</strong> 为例。把所有命令中的端口与速率改成实际值；设备若已设为 1M，使用 <code>--serial-baud 1000000</code>。</p>
+<h4>第 2 步 · 扫描舵机，记下设备编号</h4>
+<div class="code-block" id="guide-uart-scan"><div class="code-label">终端 · 扫描 ID 0～10</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --mode scan --start-id 0 --end-id 10</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现 <code>[hit]</code> 行。<code>probe=0x00</code> 表示 ID 0，<code>probe=0x01</code> 表示 ID 1，<code>probe=0x05</code> 表示 ID 5，<code>probe=0x0A</code> 表示 ID 10。下文以 ID 0 继续，其他编号修改 <code>--motor-id</code> 后执行。扫描范围可通过 <code>--start-id</code> 和 <code>--end-id</code> 在 0～254 内调整。</p>
+<h4>第 3 步 · 先读取一次当前状态</h4>
+<div class="code-block" id="guide-uart-status"><div class="code-label">终端 · 读取 ID 0 的位置、电流与温度</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --motor-id 0 --mode status</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现包含 <code>pos</code>、<code>vel</code>、<code>current</code>、<code>temp</code> 和 <code>status</code> 的一行数据。字段含义见下方<a href="#guide-feedback">“读懂反馈”</a>。</p>
+<h4>第 4 步 · 转到 90°，连续观察反馈</h4>
+<p>示例目标是<strong>相对已保存零点的绝对 90°</strong>，速度上限为 <strong>30°/s</strong>。在命令中分别写为 <code>--pos 1.5707963</code> 和 <code>--vlim 0.5235988</code>；按机构允许的角度调整目标。从 0° 出发约需 3 秒，下面两条命令依次发送目标、采集 150 次反馈。</p>
+<div class="code-block" id="guide-uart-move"><div class="code-label">终端 · 整块执行：发送目标，随后持续读取状态</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --motor-id 0 --mode pos-vel --pos 1.5707963 --vlim 0.5235988
+
+./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --motor-id 0 --mode status --loop 150 --dt-ms 40</code></pre></div>
+<p class="expect"><strong>观察结果：</strong><code>pos</code> 随转动变化，90° 对应约 <code>+1.57080 rad</code>；到位后位置稳定，<code>vel</code> 接近 0。<code>--loop 150</code> 表示读取 150 次，<code>--dt-ms 40</code> 表示两次查询之间等待 40 ms，整段采集约 6 秒以上。</p>
+<h4>第 5 步 · 停止保持，结束后卸力</h4>
+<p><code>stop</code> 让舵机停止并保持当前位置。在反馈循环中，可先按 <kbd>Ctrl+C</kbd> 结束终端采样，再执行停止命令；结束采样后，舵机继续执行已下发的目标。</p>
+<div class="code-block" id="guide-uart-stop"><div class="code-label">终端 · 停止并保持当前位置</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --motor-id 0 --mode stop</code></pre></div>
+<p>结束使用时执行 <code>disable</code>，舵机释放输出，转轴进入卸力状态。</p>
+<div class="code-block" id="guide-uart-disable"><div class="code-label">终端 · 卸力</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 --serial-baud 115200 \
+  --motor-id 0 --mode disable</code></pre></div>
+<p class="expect"><strong>本路线完成：</strong>已完成设备发现、状态读取、限速位置控制和卸力。下一次使用时，沿用对应的完整命令并修改目标角度即可。</p>
+</div>
+        <div class="guide-route" id="guide-can">
+          <h3>B. CAN 舵机 + 标准 USB CAN</h3>
+          <h4>第 1 步 · 接线，确认电脑上的设备名称</h4>
+          <p class="wiring">电脑 USB → PCAN / CANable → CANH、CANL → CAN 舵机；按舵机规格接通外部电源。</p>
+          <p>CANH 接 CANH，CANL 接 CANL，总线两端各配置 120 Ω 终端电阻。Linux 通过 SocketCAN 使用转接板；CANable 的 candleLight / gs_usb 固件提供这种接口。</p>
+<div class="code-block" id="guide-can-port"><div class="code-label">终端 · 查看 CAN 接口</div><pre><code class="language-bash">ip -brief link</code></pre></div>
+<p>找到 <code>can0</code> 这一项；若实际名称为 <code>can1</code>，将本路线中的 <code>can0</code> 全部替换为 <code>can1</code>。</p>
+<p>本路线以 <code>can0</code>、<strong>1 Mbps</strong> 为例。下面的 <code>1000000</code> 是转接板 CAN 侧的速率，应与舵机已有设置一致；500 kbit/s 的舵机使用 <code>500000</code>。</p>
+<div class="code-block" id="guide-can-setup"><div class="code-label">终端 · 将 can0 设为 1 Mbps 并启动</div><pre><code class="language-bash">sudo ip link set can0 down
+sudo ip link set can0 type can bitrate 1000000
+sudo ip link set can0 up
+ip -details link show can0</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>输出中出现 <code>UP</code> 和 <code>bitrate 1000000</code>，随后开始扫描舵机。</p>
+<h4>第 2 步 · 扫描舵机，记下设备编号</h4>
+<div class="code-block" id="guide-can-scan"><div class="code-label">终端 · 扫描 ID 0～10</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --mode scan --start-id 0 --end-id 10</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现 <code>[hit]</code> 行。<code>probe=0x00</code> 表示 ID 0，<code>probe=0x01</code> 表示 ID 1，<code>probe=0x05</code> 表示 ID 5，<code>probe=0x0A</code> 表示 ID 10。下文以 ID 0 继续，其他编号修改 <code>--motor-id</code> 后执行。扫描范围可通过 <code>--start-id</code> 和 <code>--end-id</code> 在 0～254 内调整。</p>
+<h4>第 3 步 · 先读取一次当前状态</h4>
+<div class="code-block" id="guide-can-status"><div class="code-label">终端 · 读取 ID 0 的位置、电流与温度</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --motor-id 0 --mode status</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现包含 <code>pos</code>、<code>vel</code>、<code>current</code>、<code>temp</code> 和 <code>status</code> 的一行数据。字段含义见下方<a href="#guide-feedback">“读懂反馈”</a>。</p>
+<h4>第 4 步 · 转到 90°，连续观察反馈</h4>
+<p>示例目标是<strong>相对已保存零点的绝对 90°</strong>，速度上限为 <strong>30°/s</strong>。在命令中分别写为 <code>--pos 1.5707963</code> 和 <code>--vlim 0.5235988</code>；按机构允许的角度调整目标。从 0° 出发约需 3 秒，下面两条命令依次发送目标、采集 150 次反馈。</p>
+<div class="code-block" id="guide-can-move"><div class="code-label">终端 · 整块执行：发送目标，随后持续读取状态</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --motor-id 0 --mode pos-vel --pos 1.5707963 --vlim 0.5235988
+
+./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --motor-id 0 --mode status --loop 150 --dt-ms 40</code></pre></div>
+<p class="expect"><strong>观察结果：</strong><code>pos</code> 随转动变化，90° 对应约 <code>+1.57080 rad</code>；到位后位置稳定，<code>vel</code> 接近 0。<code>--loop 150</code> 表示读取 150 次，<code>--dt-ms 40</code> 表示两次查询之间等待 40 ms，整段采集约 6 秒以上。</p>
+<h4>第 5 步 · 停止保持，结束后卸力</h4>
+<p><code>stop</code> 让舵机停止并保持当前位置。在反馈循环中，可先按 <kbd>Ctrl+C</kbd> 结束终端采样，再执行停止命令；结束采样后，舵机继续执行已下发的目标。</p>
+<div class="code-block" id="guide-can-stop"><div class="code-label">终端 · 停止并保持当前位置</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --motor-id 0 --mode stop</code></pre></div>
+<p>结束使用时执行 <code>disable</code>，舵机释放输出，转轴进入卸力状态。</p>
+<div class="code-block" id="guide-can-disable"><div class="code-label">终端 · 卸力</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar \
+  --transport socketcan --channel can0 \
+  --motor-id 0 --mode disable</code></pre></div>
+<p class="expect"><strong>本路线完成：</strong>已完成设备发现、状态读取、限速位置控制和卸力。下一次使用时，沿用对应的完整命令并修改目标角度即可。</p>
+</div>
+        <div class="guide-route" id="guide-uc06">
+          <h3>C. CAN 舵机 + UC-06</h3>
+          <h4>第 1 步 · 接线，确认电脑上的设备名称</h4>
+          <p class="wiring">电脑 USB Type-C → UC-06 → CAN 舵机；按板卡标识接通匹配的外部电源。</p>
+          <p>按 UC-06 板卡标识连接 CAN 信号线与供电，并根据板卡在总线上的位置设置 120 Ω 终端电阻开关。UC-06 在电脑上显示为串口，舵机使用 CAN 协议。</p>
+<div class="code-block" id="guide-uc06-port"><div class="code-label">终端 · 查看 USB 串口名称</div><pre><code class="language-bash">ls /dev | grep -E &#x27;^(ttyUSB|ttyACM)&#x27;</code></pre></div>
+<p>例如输出 <code>ttyUSB0</code>，对应的完整端口名就是 <code>/dev/ttyUSB0</code>。有多个端口时，可对比插入转接板前后的列表，找到新增的一项。</p>
+<p>本路线以 <code>/dev/ttyUSB0</code>、<strong>CAN 1 Mbps</strong> 为例。<code>--can-bitrate 1000000</code> 设置 UC-06 的 CAN 侧速率，与舵机已有设置匹配；500 kbit/s 舵机使用 <code>500000</code>。USB 串口速率由驱动自动设为 1M。</p>
+<h4>第 2 步 · 扫描舵机，记下设备编号</h4>
+<div class="code-block" id="guide-uc06-scan"><div class="code-label">终端 · 扫描 ID 0～10</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --mode scan --start-id 0 --end-id 10</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现 <code>[hit]</code> 行。<code>probe=0x00</code> 表示 ID 0，<code>probe=0x01</code> 表示 ID 1，<code>probe=0x05</code> 表示 ID 5，<code>probe=0x0A</code> 表示 ID 10。下文以 ID 0 继续，其他编号修改 <code>--motor-id</code> 后执行。扫描范围可通过 <code>--start-id</code> 和 <code>--end-id</code> 在 0～254 内调整。</p>
+<h4>第 3 步 · 先读取一次当前状态</h4>
+<div class="code-block" id="guide-uc06-status"><div class="code-label">终端 · 读取 ID 0 的位置、电流与温度</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode status</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>出现包含 <code>pos</code>、<code>vel</code>、<code>current</code>、<code>temp</code> 和 <code>status</code> 的一行数据。字段含义见下方<a href="#guide-feedback">“读懂反馈”</a>。</p>
+<h4>第 4 步 · 转到 90°，连续观察反馈</h4>
+<p>示例目标是<strong>相对已保存零点的绝对 90°</strong>，速度上限为 <strong>30°/s</strong>。在命令中分别写为 <code>--pos 1.5707963</code> 和 <code>--vlim 0.5235988</code>；按机构允许的角度调整目标。从 0° 出发约需 3 秒，下面两条命令依次发送目标、采集 150 次反馈。</p>
+<div class="code-block" id="guide-uc06-move"><div class="code-label">终端 · 整块执行：发送目标，随后持续读取状态</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode pos-vel --pos 1.5707963 --vlim 0.5235988
+
+./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode status --loop 150 --dt-ms 40</code></pre></div>
+<p class="expect"><strong>观察结果：</strong><code>pos</code> 随转动变化，90° 对应约 <code>+1.57080 rad</code>；到位后位置稳定，<code>vel</code> 接近 0。<code>--loop 150</code> 表示读取 150 次，<code>--dt-ms 40</code> 表示两次查询之间等待 40 ms，整段采集约 6 秒以上。</p>
+<h4>第 5 步 · 停止保持，结束后卸力</h4>
+<p><code>stop</code> 让舵机停止并保持当前位置。在反馈循环中，可先按 <kbd>Ctrl+C</kbd> 结束终端采样，再执行停止命令；结束采样后，舵机继续执行已下发的目标。</p>
+<div class="code-block" id="guide-uc06-stop"><div class="code-label">终端 · 停止并保持当前位置</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode stop</code></pre></div>
+<p>结束使用时执行 <code>disable</code>，舵机释放输出，转轴进入卸力状态。</p>
+<div class="code-block" id="guide-uc06-disable"><div class="code-label">终端 · 卸力</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode disable</code></pre></div>
+<p class="expect"><strong>本路线完成：</strong>已完成设备发现、状态读取、限速位置控制和卸力。下一次使用时，沿用对应的完整命令并修改目标角度即可。</p>
+</div>
+        <h3 id="guide-feedback">读懂反馈：每一列是什么意思</h3>
+        <p>三条路线使用相同的输出格式。下面是一行格式示例，具体数值随设备状态变化：</p>
+<div class="code-block"><div class="code-label">输出示例 · 状态数据</div><pre><code class="language-text">#8 pos=+1.57080 vel=+0.000 current=0.020A temp=32.0C status=0x00</code></pre></div>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">字段</th><th scope="col">怎样理解</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>pos</code></th><td>当前位置，单位 rad（弧度）。<code>0</code> 为零点，<code>1.5708</code> 约为 90°，<code>3.1416</code> 约为 180°。</td></tr>
+            <tr><th scope="row"><code>vel</code></th><td>根据相邻位置样本估算的平均速度，单位 rad/s。首条样本显示 <code>NaN</code> 时，继续读取，第二条有效样本起提供速度值。</td></tr>
+            <tr><th scope="row"><code>current</code></th><td>舵机电流，单位 A。Python / WebSocket 的对应字段名为 <code>torq</code>，FashionStar 在该字段提供电流。</td></tr>
+            <tr><th scope="row"><code>temp</code></th><td>舵机温度，单位 °C；Python / WebSocket 的对应字段名为 <code>t_mos</code>。</td></tr>
+            <tr><th scope="row"><code>status</code></th><td>设备状态字，按协议保留原值；Python / WebSocket 的对应字段名为 <code>status_code</code>。</td></tr>
+          </tbody>
+        </table></div>
+        <h3>连接时的快速核对</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">看到的现象</th><th scope="col">接下来怎么做</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">找不到 <code>motor_cli</code></th><td>回到包含 <code>Cargo.toml</code> 的仓库根目录，完成上方构建，再使用 <code>./target/release/motor_cli</code> 运行。</td></tr>
+            <tr><th scope="row">串口路径不存在</th><td>重新查看设备列表，将命令中的 <code>/dev/ttyUSB0</code> 替换为实际端口。</td></tr>
+            <tr><th scope="row"><code>Permission denied</code></th><td>检查串口设备的所属用户组，请系统管理员为当前用户配置访问权限，重新登录后继续。</td></tr>
+            <tr><th scope="row">端口被占用</th><td>关闭正在使用该转接板的配置工具、串口工具或另一个 motorbridge 进程，再执行命令。</td></tr>
+            <tr><th scope="row">扫描结果为 <code>hits=0</code></th><td>依次核对舵机外部供电、信号接线、通信速率和扫描 ID 范围。UART 核对 <code>--serial-baud</code>，UC-06 核对 <code>--can-bitrate</code>，标准 USB CAN 核对系统 CAN 接口速率。</td></tr>
+          </tbody>
+        </table></div>
+        <p>需要编写程序、使用网页控制或配置舵机时，继续阅读<a href="#integration">第 06 节</a>。</p>
+      </section>
+
       <section id="integration">
-        <h2><span class="num">04</span>接口交付与接入方式</h2>
+        <h2><span class="num">06</span>进阶使用：Python、网页控制与设备配置</h2>
+        <p>完成第 05 节的连接与扫描后，按应用需要选择：<a href="#guide-python">编写 Python 程序</a>、<a href="#guide-ws">使用 WebSocket 网页客户端</a>，或<a href="#guide-config">读取配置、改 ID 与置零</a>。</p>
+        <h3 id="guide-python">Python：运行一份完整的控制程序</h3>
+        <p>以下示例使用 <strong>UC-06、CAN 1 Mbps、ServoID 0</strong>。程序向绝对 90° 运动，速度上限 30°/s，读取 6 秒反馈，并在结束时卸力。Python 输出中的角度和速度已转换为 °、°/s，便于直接观察。</p>
+        <h4>第 1 步 · 构建 Python 使用的本地库</h4>
+        <p>准备 Python 3.10+，在仓库根目录的终端执行以下命令。环境变量在当前终端生效，后续 Python 程序也在这个终端运行。</p>
+<div class="code-block" id="guide-python-build"><div class="code-label">终端 · 构建库并设置 Python 环境</div><pre><code class="language-bash">cargo build --release -p motor_abi
+export PYTHONPATH=&quot;$PWD/bindings/python/src${PYTHONPATH:+:$PYTHONPATH}&quot;
+export MOTORBRIDGE_LIB=&quot;$PWD/target/release/libmotor_abi.so&quot;</code></pre></div>
+<h4>第 2 步 · 将以下代码保存为 <code>fashionstar_demo.py</code></h4>
+<p>把文件放在仓库根目录。修改端口和 <code>motor_id</code>，使其与第 05 节扫描结果一致；UART 与标准 USB CAN 的替换方式列在代码下方。</p>
+<div class="code-block" id="guide-python-example"><div class="code-label">文件内容 · fashionstar_demo.py · 完整示例</div><pre><code class="language-python">import math
+import time
+from motorbridge import Controller
+
+motor_id = 0
+target_degrees = 90
+speed_degrees_per_second = 30
+
+# 本例使用 UC-06；端口和 CAN 速率与舵机连接一致。
+controller = Controller.from_uc06(&quot;/dev/ttyUSB0&quot;, 1000000)
+model = &quot;fashionstar&quot;
+
+# 离开 with 时，控制器会卸力并释放连接。
+with controller:
+    motor = controller.add_fashionstar_motor(motor_id, 0x321, model)
+    try:
+        motor.send_pos_vel(
+            math.radians(target_degrees),
+            math.radians(speed_degrees_per_second),
+        )
+        deadline = time.monotonic() + 6.0
+        while time.monotonic() &lt; deadline:
+            motor.request_feedback()
+            state = motor.get_state_snapshot().state
+            print(f&quot;位置={math.degrees(state.pos):.1f}° &quot;
+                  f&quot;速度={math.degrees(state.vel):.1f}°/s &quot;
+                  f&quot;电流={state.torq:.3f} A &quot;
+                  f&quot;温度={state.t_mos:.1f} °C&quot;)
+            time.sleep(0.04)
+    finally:
+        motor.close()</code></pre></div>
+        <p><strong>换一种连接方式：</strong>将上面相邻的 <code>controller = ...</code> 和 <code>model = ...</code> 两行替换为对应内容，其余控制和反馈代码沿用。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">连接方式</th><th scope="col">controller 这一行</th><th scope="col">model 这一行</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">UART / RS-485</th><td><code>controller = Controller.from_uart("/dev/ttyUSB0", 115200)</code></td><td><code>model = "uart"</code></td></tr>
+            <tr><th scope="row">标准 USB CAN</th><td><code>controller = Controller("can0")</code></td><td><code>model = "fashionstar"</code></td></tr>
+            <tr><th scope="row">UC-06</th><td><code>controller = Controller.from_uc06("/dev/ttyUSB0", 1000000)</code></td><td><code>model = "fashionstar"</code></td></tr>
+          </tbody>
+        </table></div>
+        <p>UART 的 115200 填写实际串口速率；UC-06 的 1000000 填写实际 CAN 速率；标准 USB CAN 沿用第 05 节配置好的 <code>can0</code>。<code>add_fashionstar_motor</code> 的三个参数依次是设备 ID、通信标识 <code>0x321</code>、协议型号；UART 也按接口约定填入 <code>0x321</code>。</p>
+        <h4>第 3 步 · 运行程序，查看中文反馈</h4>
+<div class="code-block" id="guide-python-run"><div class="code-label">终端 · 运行刚保存的文件</div><pre><code class="language-bash">python3 fashionstar_demo.py</code></pre></div>
+        <p class="expect"><strong>完成标志：</strong>终端持续显示“位置、速度、电流、温度”，程序运行约 6 秒后退出并卸力。首条速度样本建立计算基线，后续样本显示估算速度。</p>
+        <p>多舵机共用一个 <code>Controller</code>，按各自 ServoID 多次调用 <code>add_fashionstar_motor</code>，分别保存电机对象，即可逐台控制和读取状态。</p>
+        <h3 id="guide-ws">WebSocket：用随项目提供的网页发送命令</h3>
+        <p>WebSocket 网关让网页或上位机通过 JSON 消息控制舵机。下面使用项目自带的调试页面，每次发送一条 JSON，操作结果显示在页面日志中。</p>
+        <h4>第 1 步 · 在终端启动网关</h4>
+<div class="code-block" id="guide-ws-start"><div class="code-label">终端 1 · 构建并启动网关，保持此终端运行</div><pre><code class="language-bash">cargo build --release -p ws_gateway
+./target/release/ws_gateway --bind 127.0.0.1:9002</code></pre></div>
+        <h4>第 2 步 · 打开网页客户端，建立连接</h4>
+        <p>在文件管理器中打开仓库内的 <code>integrations/ws_gateway/tools/ws_test_client.html</code>。页面顶部 <strong>WS URL</strong> 填写 <code>ws://127.0.0.1:9002</code>，点击<strong>“连接”</strong>。随后在页面下方的<strong>“自定义 JSON”</strong>输入框中粘贴下方消息，点击<strong>“发送”</strong>。</p>
+        <h4>第 3 步 · 按接线方式，发送一个连接配置</h4>
+        <p>从下列三个配置中选择一个。端口、速率和 <code>motor_id</code> 与第 05 节保持一致；日志返回 <code>ok: true</code> 后继续读取状态。</p>
+<div class="code-block" id="guide-ws-uart"><div class="code-label">网页 JSON 输入框 · 连接配置 · UART / RS-485</div><pre><code class="language-json">{
+  &quot;op&quot;: &quot;set_target&quot;,
+  &quot;vendor&quot;: &quot;fashionstar&quot;,
+  &quot;model&quot;: &quot;uart&quot;,
+  &quot;transport&quot;: &quot;uart&quot;,
+  &quot;serial_port&quot;: &quot;/dev/ttyUSB0&quot;,
+  &quot;serial_baud&quot;: 115200,
+  &quot;motor_id&quot;: 0
+}</code></pre></div>
+<div class="code-block" id="guide-ws-can"><div class="code-label">网页 JSON 输入框 · 连接配置 · 标准 USB CAN</div><pre><code class="language-json">{
+  &quot;op&quot;: &quot;set_target&quot;,
+  &quot;vendor&quot;: &quot;fashionstar&quot;,
+  &quot;model&quot;: &quot;fashionstar&quot;,
+  &quot;transport&quot;: &quot;socketcan&quot;,
+  &quot;channel&quot;: &quot;can0&quot;,
+  &quot;motor_id&quot;: 0
+}</code></pre></div>
+<div class="code-block" id="guide-ws-uc06"><div class="code-label">网页 JSON 输入框 · 连接配置 · UC-06 + CAN</div><pre><code class="language-json">{
+  &quot;op&quot;: &quot;set_target&quot;,
+  &quot;vendor&quot;: &quot;fashionstar&quot;,
+  &quot;model&quot;: &quot;fashionstar&quot;,
+  &quot;transport&quot;: &quot;uc06&quot;,
+  &quot;serial_port&quot;: &quot;/dev/ttyUSB0&quot;,
+  &quot;can_bitrate&quot;: 1000000,
+  &quot;motor_id&quot;: 0
+}</code></pre></div>
+<h4>第 4 步 · 读取状态，再发送运动目标</h4>
+<p>先发送这条状态查询。日志返回 <code>ok: true</code>，且 <code>data.state</code> 中包含 <code>pos</code>、<code>torq</code>、<code>t_mos</code> 等数据，即完成了设备通信。</p>
+<div class="code-block" id="guide-ws-state"><div class="code-label">网页 JSON 输入框 · 读取一次状态</div><pre><code class="language-json">{&quot;op&quot;:&quot;state_once&quot;}</code></pre></div>
+<p>再发送以下目标：绝对 90°，速度上限 30°/s。<code>continuous: false</code> 表示发送一次运动命令，舵机执行到目标位置。</p>
+<div class="code-block" id="guide-ws-move"><div class="code-label">网页 JSON 输入框 · 发送运动目标</div><pre><code class="language-json">{
+  &quot;op&quot;: &quot;pos_vel&quot;,
+  &quot;pos&quot;: 1.5707963,
+  &quot;vlim&quot;: 0.5235988,
+  &quot;continuous&quot;: false
+}</code></pre></div>
+<p>运动过程中，可反复发送上面的 <code>state_once</code> 查看状态。需要自动连续接收时，发送：</p>
+<div class="code-block" id="guide-ws-stream-on"><div class="code-label">网页 JSON 输入框 · 开启连续反馈</div><pre><code class="language-json">{&quot;op&quot;:&quot;state_stream&quot;,&quot;enabled&quot;:true}</code></pre></div>
+<h4>第 5 步 · 停止、卸力并结束反馈</h4>
+<p>需要中途停止并保持时发送 <code>stop</code>；结束使用时发送 <code>disable</code> 卸力。下面每个代码块分别粘贴并发送一次。</p>
+<div class="code-block" id="guide-ws-stop"><div class="code-label">网页 JSON 输入框 · 停止并保持</div><pre><code class="language-json">{&quot;op&quot;:&quot;stop&quot;}</code></pre></div>
+<div class="code-block" id="guide-ws-disable"><div class="code-label">网页 JSON 输入框 · 卸力</div><pre><code class="language-json">{&quot;op&quot;:&quot;disable&quot;}</code></pre></div>
+<div class="code-block" id="guide-ws-stream-off"><div class="code-label">网页 JSON 输入框 · 结束连续反馈</div><pre><code class="language-json">{&quot;op&quot;:&quot;state_stream&quot;,&quot;enabled&quot;:false}</code></pre></div>
+        <p class="expect"><strong>完成标志：</strong>控制请求均收到 <code>ok: true</code>，舵机卸力，连续状态推送结束。随后可点击网页的“断开”，并在网关终端按 <kbd>Ctrl+C</kbd> 退出。</p>
+        <h3 id="guide-config">设备配置：读取参数、修改 ID 与设置零点</h3>
+        <p>以下例子使用 <strong>UC-06、CAN 1 Mbps</strong>，从设备 ID 0 开始。使用 UART 或标准 USB CAN 时，沿用第 05 节对应路线的连接参数，替换命令末行的操作参数即可。</p>
+        <h4>读取型号与通信配置</h4>
+        <p><code>read-param</code> 读取参数；<code>--param-id</code> 指定参数编号。先读取型号：</p>
+<div class="code-block" id="guide-config-read"><div class="code-label">终端 · 读取 ID 0 的型号码</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --mode read-param --param-id 0x01</code></pre></div>
+        <p class="expect"><strong>完成标志：</strong>输出 <code>param 0x0001 (u32) = …</code>。将末尾的 <code>0x01</code> 换为下表中的编号，可读取对应信息。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">参数编号</th><th scope="col">含义</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>0x01</code></th><td>设备型号码</td></tr>
+            <tr><th scope="row"><code>0x02</code></th><td>固件版本码</td></tr>
+            <tr><th scope="row"><code>0x81</code></th><td>ServoID，即设备编号</td></tr>
+            <tr><th scope="row"><code>0x82</code></th><td>通信速率索引；具体速率按 CAN 或 UART 的对应表解读。</td></tr>
+          </tbody>
+        </table></div>
+        <h4>将 ID 0 改为 ID 2</h4>
+        <p>先通过扫描确认 ID 2 空闲，再执行。ID 修改即时生效并保存；这条 CAN 命令后等待 120 ms，再用新 ID 查询型号。</p>
+<div class="code-block" id="guide-config-id"><div class="code-label">终端 · 修改 ID 并验证</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 0 --set-motor-id 2
+sleep 0.12
+./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 2 --mode ping</code></pre></div>
+<p class="expect"><strong>完成标志：</strong>新 ID 查询输出 <code>model_code=…</code>。之后使用 <code>--motor-id 2</code> 控制这台舵机。</p>
+<h4>将当前位置保存为新的 0°</h4>
+<p>将机构移动到所需零点后执行 <code>zero</code>。该操作会卸力并改写保存的原点，后续绝对角度均以此位置为基准。下面使用刚设置的 ID 2：</p>
+<div class="code-block" id="guide-config-zero"><div class="code-label">终端 · 保存新零点并查看坐标</div><pre><code class="language-bash">./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 2 --mode zero
+./target/release/motor_cli --vendor fashionstar --model fashionstar --transport uc06 \
+  --serial-port /dev/ttyUSB0 --can-bitrate 1000000 \
+  --motor-id 2 --mode status</code></pre></div>
+        <p class="expect"><strong>完成标志：</strong>状态中的 <code>pos</code> 接近 0。继续执行位置命令时，目标角度相对新零点计算。</p>
+        <p>CAN 与 UART 的 ID、速率修改均即时生效并在断电后保留；修改速率后，主机连接设置也切换到新速率。CAN 写入后等待 120 ms 再重连，其他 CAN 配置按重新上电流程应用。参数映射见第 04 节，完整参数及速率索引见文末的命令行 API 参考。</p>
+        <h3>接口覆盖与软件结构</h3>
         <figure class="diagram" aria-label="FashionStar 双协议软件架构">
           <div class="top">应用入口：Rust API / CLI · C ABI · Python SDK / CLI · C++ · WebSocket</div>
           <div class="arrow" aria-hidden="true">↕</div>
           <div class="top">统一 FashionStar 控制器与电机接口<br><span class="small">设备识别 · POS_VEL · 保持/卸力 · 置零 · 状态 · 参数</span></div>
           <div class="arrow" aria-hidden="true">↕</div>
           <div class="branches">
-            <div class="branch"><b>CAN 型号</b><code>model=fashionstar</code><span>CAN 编码 / 寄存器读写</span><span><code>CoreController&lt;CanFrame&gt;</code></span><span>CAN 接口 / MCU 串口转 CAN</span></div>
+            <div class="branch"><b>CAN 型号</b><code>model=fashionstar</code><span>CAN 编码 / 寄存器读写</span><span><code>CoreController&lt;CanFrame&gt;</code></span><span>标准 USB CAN / UC-06 / MCU 串口转 CAN</span></div>
             <div class="branch"><b>UART 型号</b><code>model=uart</code><span>UART 命令 / 公共参数转换</span><span><code>CoreController&lt;UartFrame&gt;</code></span><span>原生串口 / UART / RS-485</span></div>
           </div>
           <figcaption>上层按 transport 选择连接，协议差异由 FashionStar 驱动处理。核心接收、设备分发与生命周期按帧类型复用。</figcaption>
@@ -292,73 +670,91 @@
           <thead><tr><th scope="col">接入层</th><th scope="col">本次交付的入口与能力</th></tr></thead>
           <tbody>
             <tr><th scope="row">Rust 驱动与 CLI</th><td><code>FashionstarController</code>、<code>FashionstarMotor</code>；命令覆盖 <code>scan</code>、<code>ping</code>、<code>status</code>、<code>enable</code>、<code>disable</code>、<code>stop</code>、<code>pos-vel</code>、<code>zero</code>、<code>read-param</code>、<code>write-param</code>，并支持 <code>--set-motor-id</code>。</td></tr>
-            <tr><th scope="row">C ABI</th><td>新增 <code>motor_controller_add_fashionstar_motor</code> 与 <code>motor_controller_new_uart</code>；复用位置控制、反馈、状态、参数和生命周期函数。</td></tr>
-            <tr><th scope="row">Python SDK / CLI</th><td><code>Controller.add_fashionstar_motor(...)</code>、<code>Controller.from_uart(...)</code>；SDK 复用电机方法，CLI 接入扫描、改 ID、位置控制、使能/卸力、置零、型号查询与参数读写。</td></tr>
-            <tr><th scope="row">C++</th><td><code>Controller::add_fashionstar_motor(...)</code>、<code>Controller::from_uart(...)</code>；复用 <code>Motor</code> 对象完成控制、状态及参数操作。</td></tr>
+            <tr><th scope="row">C ABI</th><td>新增 <code>motor_controller_add_fashionstar_motor</code> 与 <code>motor_controller_new_uart</code>、<code>motor_controller_new_uc06</code>；复用位置控制、反馈、状态、参数和生命周期函数。</td></tr>
+            <tr><th scope="row">Python SDK / CLI</th><td><code>Controller.add_fashionstar_motor(...)</code>、<code>Controller.from_uart(...)</code>、<code>Controller.from_uc06(...)</code>；SDK 复用电机方法，CLI 接入扫描、改 ID、位置控制、使能/卸力、置零、型号查询与参数读写。</td></tr>
+            <tr><th scope="row">C++</th><td><code>Controller::add_fashionstar_motor(...)</code>、<code>Controller::from_uart(...)</code>、<code>Controller::from_uc06(...)</code>；复用 <code>Motor</code> 对象完成控制、状态及参数操作。</td></tr>
             <tr><th scope="row">WebSocket</th><td>接入 <code>set_target</code>、<code>scan</code>、<code>verify</code>、<code>set_id</code>、<code>pos_vel</code>、<code>state_once</code>、状态流及 <code>param_stream</code>；参数流沿用统一编号。</td></tr>
           </tbody>
         </table></div>
-        <h3>连接参数与操作入口</h3>
-        <div class="cols">
-          <div class="panel"><h3>CAN</h3><p>使用已配置的 CAN 通道，<code>feedback_id=0x321</code>，<code>motor_id</code> 为设备 ServoID。</p><pre><code>motor_cli --vendor fashionstar \
-  --model fashionstar --transport socketcan \
-  --channel can0 --motor-id 0 --mode status</code></pre></div>
-          <div class="panel"><h3>UART / RS-485</h3><p>显式指定 <code>transport=uart</code> 和匹配的串口波特率；<code>feedback_id=0x321</code> 用作统一接口占位值，设备通过 ServoID 寻址。</p><pre><code>motor_cli --vendor fashionstar \
-  --model uart --transport uart \
-  --serial-port /dev/ttyUSB0 \
-  --serial-baud 115200 --motor-id 0 \
-  --mode status</code></pre></div>
-        </div>
-        <h3>统一配置操作流程</h3>
-        <ol class="steps">
-          <li><b>识别设备</b>选择链路，扫描 ServoID，读取型号和当前参数。</li>
-          <li><b>写入配置</b>使用公共参数编号设置 ID、通信速率或运行配置。</li>
-          <li><b>应用配置</b>CAN 重新上电；UART 的 ID 和波特率立即切换。</li>
-          <li><b>回读确认</b>使用新连接参数重新识别设备并核对目标配置。</li>
-        </ol>
       </section>
 
       <section id="verification">
-        <h2><span class="num">05</span>软件验证与验收结果</h2>
-        <p>验收采用<strong>源代码与协议核对、自动化测试、模拟 CAN 总线、伪串口通信和本地 WebSocket 联调</strong>，覆盖协议实现、统一接口及应用调用链路。</p>
+        <h2><span class="num">07</span>验收数据：软件检查与双协议真机验证</h2>
+        <p>验收贯穿协议核对、自动化回归、伪串口异常测试和真实舵机联调。真机操作通过 motorbridge 接口完成，覆盖单设备、双设备、运动中状态、配置切换和连接恢复。</p>
+        <div class="data-points">
+          <div class="data-point"><strong>1,000 / 1,000</strong><span>CAN 连续目标写入与读回匹配</span></div>
+          <div class="data-point"><strong>10 档 / 8 档</strong><span>CAN / UART 通信速率实测覆盖</span></div>
+          <div class="data-point"><strong>3,736 次</strong><span>CAN 双机连续 30 秒反馈成功</span></div>
+        </div>
+        <h3>CAN + UC-06 双机验收</h3>
+        <p class="small">测试对象：两台型号码 <code>0x0501</code>、固件码 <code>0x0902</code> 的 CAN 舵机，ServoID 0 / 1；UC-06 接入。反馈性能测试使用 CAN 1 Mbps、USB 串口 1 Mbps。</p>
         <div class="table-wrap"><table class="evidence">
-          <thead><tr><th scope="col">验证项目</th><th scope="col">方法与覆盖内容</th><th scope="col">结果</th></tr></thead>
+          <thead><tr><th scope="col">验收项目</th><th scope="col">实测成果</th><th scope="col">结果</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Rust 工作区回归</th><td><code>cargo test --workspace --locked --offline</code>：242 项测试通过，包含 6 项 FashionStar 专属测试。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">FashionStar 协议测试</th><td>CAN 报文与状态回归；UART 命令编码、参数校验、公共编号转换、请求匹配、事务串行、状态换算与解码恢复。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">Python 接口与环境</th><td>15 项接口元数据、模块导入、平台传输和状态快照相关测试。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">跨接口串口联调</th><td>通过伪串口运行 Python/C ABI、Rust CLI、Python CLI 和 C++；检查命令、查询、配置、状态以及控制器关闭流程。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">WebSocket 联调</th><td>本地 WS 网关与伪串口联动，覆盖目标设置、控制、状态、默认参数流、设备扫描和 ID 写入。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">代码规范与静态检查</th><td>默认 <code>cargo fmt</code> 检查及工作区 <code>cargo clippy --all-targets -- -D warnings</code> 检查。</td><td><span class="ok">通过</span></td></tr>
-            <tr><th scope="row">Windows 编译检查</th><td>FashionStar 驱动、C ABI 与 Rust CLI 的 <code>x86_64-pc-windows-gnu</code> 全目标编译检查。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">位置与速度</th><td>两台完成 30、45、60、90、120、150、180、240、300、360°/s 十档速度的 360° 行程，及 +720° / −720° 多圈往返；持续采集状态。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">双机协同</th><td>独立寻址与控制；运动中停止、卸力、阻尼、目标更新及批量输出切换；并发读取反馈与参数。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">通信与配置</th><td>十档 CAN 速率均完成双机识别、反馈和往返运动；19 项配置回读一致，改 ID 与速率即时生效，断电后保存。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">原点与多圈</th><td>清除多圈计数、非零位置置零、恢复工厂原点及重新设定零点；状态缓存与速度采样基线同步更新。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">通信连续性</th><td>1,000 次目标写入逐次读回匹配；30 秒双机读取取得 3,736 次完整反馈，错误数 0；五轮关闭重开完成。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">掉电与恢复</th><td>两台共同断电 5 秒后恢复供电，重新建立串口连接，核对 ID、速率、零点及配置保存。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">应用入口</th><td>Rust/Python CLI 扫描与状态、C++ 双机控制、WebSocket 扫描/运动/反馈/参数流完成真机复测。</td><td><span class="ok">通过</span></td></tr>
           </tbody>
         </table></div>
-        <h3>关键验收检查点</h3>
-        <div class="cols">
-          <div class="panel"><h3>功能一致性</h3><ul><li>CAN 与 UART 使用相同的设备创建参数及电机操作语义。</li><li>多圈角度保留正负方向，位置、电流、温度按统一单位输出。</li><li>型号查询和 ID 设置复用公共参数编号，UART 原生地址转换集中在驱动。</li><li>WS 默认参数流覆盖电压、电流、功率、温度、状态、多圈位置、圈数和单圈角度。</li></ul></div>
-          <div class="panel"><h3>通信与数据一致性</h3><ul><li>校验错误、分段回包、噪声伪帧头及异常长度均纳入解码测试。</li><li>查询按设备、命令和参数匹配，超时后能够继续完成后续查询。</li><li>同一 UART 控制器下的多设备请求按事务串行执行。</li><li>设备 ID 由底层实现统一提供，状态元数据与实际寻址保持一致。</li></ul></div>
-        </div>
-        <p class="small">统计中的 6 项 FashionStar 测试已包含在 242 项 Rust 工作区测试中。验证记录与命令输出保存在 <code>temp/fashionstar-final-review-20261111/</code>。</p>
+        <h3>UART / RS-485 真机验收</h3>
+        <div class="table-wrap"><table class="evidence">
+          <thead><tr><th scope="col">验收项目</th><th scope="col">实测成果</th><th scope="col">结果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">运动与反馈</th><td>完成小幅往返、±30° / ±90° / ±360° / ±720° 运动、停止保持、卸力及置零；读取位置、估算速度、电流、温度与状态。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">多设备</th><td>ID 0 / 5 双机相向运动、归中和持续采样；两台各 18 项配置保持一致，完整反馈按设备 ID 与序号核对。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">全速率与回应</th><td>9600～1000000 baud 八档速率逐档执行控制回应开启、保持、反馈与参数读取，每档 12 轮。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">配置与连接恢复</th><td>ID、波特率即时切换及两次断电保存验证；总线共同断电恢复、USB 拔插后重新连接与配置回读。</td><td><span class="ok">通过</span></td></tr>
+          </tbody>
+        </table></div>
+        <h3>完整反馈频率</h3>
+        <p class="small">频率按实际反馈时间戳计算，每次完整反馈包含位置、状态、温度和电流，速度由连续位置采样估算。下表分别列出每组测试的链路与采样条件。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">测试场景</th><th scope="col">条件</th><th scope="col">实测频率</th><th scope="col">采样结果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">UART 双机</th><td>1M baud；ID 0 / 5；持续 31.63 秒</td><td>每台 94.84 Hz</td><td>6,000 次反馈成功</td></tr>
+            <tr><th scope="row">UART 全速率回归后复测</th><td>恢复 1M baud；两台各 284 个样本</td><td>每台约 94.6 Hz</td><td>568 次反馈成功</td></tr>
+            <tr><th scope="row">UC-06 + CAN 单台</th><td>1 Mbps；持续 5 秒</td><td>88.79 Hz</td><td>445 次完整反馈</td></tr>
+            <tr><th scope="row">UC-06 + CAN 双机</th><td>1 Mbps；ID 0 / 1；持续 30 秒</td><td>每台约 62.3 Hz</td><td>3,736 次完整反馈；错误数 0</td></tr>
+          </tbody>
+        </table></div>
+        <h3>软件与接口验收</h3>
+        <div class="table-wrap"><table class="evidence">
+          <thead><tr><th scope="col">验证项目</th><th scope="col">成果</th><th scope="col">结果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Rust 工作区</th><td><code>cargo test --workspace --locked --offline</code>：244 项通过，覆盖协议、控制器、接口与网关。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">Python 接口</th><td>15 项 API 元数据、状态快照、导入与平台传输测试通过。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">通信与异常路径</th><td>分段回包、噪声、参数边界、错误 ID、初始化状态与超时恢复；跨 SDK、CLI、C ABI 和 WebSocket 联调。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">配置切换</th><td>WebSocket 写入 ID / 波特率后停止周期目标；两种配置写入后的旧目标执行数均为 0。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">构建与静态检查</th><td>默认 fmt、工作区 Clippy 警告视为错误、C++ 严格警告编译；FashionStar 驱动、C ABI 与 Rust CLI 完成 Windows GNU 目标检查。</td><td><span class="ok">通过</span></td></tr>
+          </tbody>
+        </table></div>
       </section>
 
       <section id="delivery">
-        <h2><span class="num">06</span>交付清单与验收结论</h2>
+        <h2><span class="num">08</span>交付清单与验收结论</h2>
         <div class="table-wrap"><table>
           <thead><tr><th scope="col">交付对象</th><th scope="col">对应成果</th></tr></thead>
           <tbody>
-            <tr><th scope="row">供应商驱动</th><td><code>motor_vendors/fashionstar/</code>：控制器、统一电机对象、CAN 编解码、寄存器规则、UART 电机逻辑及串口编解码。</td></tr>
+            <tr><th scope="row">供应商驱动</th><td><code>motor_vendors/fashionstar/</code>：控制器、统一电机对象、CAN 编解码、寄存器规则、UART 电机逻辑、串口编解码及 UC-06 传输。</td></tr>
             <tr><th scope="row">核心扩展</th><td><code>motor_core/</code>：控制器、设备及总线按帧类型参数化，提供 <code>CanFrame</code> 与 <code>UartFrame</code> 两条类型化路径。</td></tr>
             <tr><th scope="row">调用与工具</th><td><code>motor_abi/</code>、<code>motor_cli/</code>、<code>bindings/python/</code>、<code>bindings/cpp/</code>、<code>integrations/ws_gateway/</code>：统一创建、控制、反馈和参数操作。</td></tr>
-            <tr><th scope="row">使用文档</th><td>FashionStar 中英文 API 文档、Python SDK/CLI 示例、C++ 入口说明、WS 能力声明与协议说明。</td></tr>
-            <tr><th scope="row">版本与验证</th><td>交付分支 <code>feat/fashionstar-unified</code>；工作区测试、接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
+            <tr><th scope="row">使用文档</th><td>FashionStar 中英文 API 文档、Python SDK/CLI 示例、C++ 入口说明、WS 能力声明与协议说明，以及本报告中的三种连接方案与应用使用指南。</td></tr>
+            <tr><th scope="row">版本与验证</th><td>交付分支 <code>feat/fashionstar-unified</code>；工作区测试、UART/CAN 真机验证、跨接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
           </tbody>
         </table></div>
-        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 双协议软件接入工作已完成。CAN 与 UART/RS-485 均已形成<strong>设备发现 → 位置控制 → 状态采集 → 参数配置 → 应用集成</strong>的完整软件链路。各项已执行的软件验证通过，现有成果为业务应用统一调用、设备配置及后续型号接入提供了可复用的实现基础。</p></div>
+        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 已在 motorbridge 中形成 <strong>CAN 与 UART/RS-485 双协议、三种连接方案、多语言统一接口</strong>的完整交付。设备发现、位置与速度上限控制、持续状态采集、配置管理及多设备操作均已接入，并通过软件回归和双协议真机测试。v2 使用指南进一步将交付成果落实为可直接执行的接线、构建、控制与反馈流程。</p></div>
 
         <h3>版本与技术依据</h3>
         <ul class="refs">
-          <li><a href="https://github.com/servodevelop/motorbridge/compare/4741f28d749817e5f976ff5ee1feccffd89be050...feat/fashionstar-unified" target="_blank" rel="noopener noreferrer">交付分支与 main 基线的代码差异</a></li>
-          <li><a href="https://github.com/servodevelop/motorbridge/tree/feat/fashionstar-unified/motor_vendors/fashionstar" target="_blank" rel="noopener noreferrer">FashionStar 驱动交付源码</a></li>
+          <li><a href="https://github.com/vincent-forks/motorbridge/compare/4741f28d749817e5f976ff5ee1feccffd89be050...feat/fashionstar-unified" target="_blank" rel="noopener noreferrer">交付分支与 main 基线的代码差异</a></li>
+          <li><a href="https://github.com/vincent-forks/motorbridge/tree/feat/fashionstar-unified/motor_vendors/fashionstar" target="_blank" rel="noopener noreferrer">FashionStar 驱动交付源码</a></li>
+          <li><a href="https://github.com/vincent-forks/motorbridge/blob/feat/fashionstar-unified/motor_cli/FASHIONSTAR_API.zh-CN.md" target="_blank" rel="noopener noreferrer">FashionStar 命令行与协议 API 参考</a></li>
+          <li><a href="https://github.com/vincent-forks/motorbridge/blob/feat/fashionstar-unified/bindings/python/FASHIONSTAR_API.zh-CN.md" target="_blank" rel="noopener noreferrer">Python SDK 与 CLI 使用参考</a></li>
+          <li><a href="https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/" target="_blank" rel="noopener noreferrer">UC-06 转接板规格与接线资料</a></li>
           <li><a href="https://fashionstar.com.hk/wiki/protocols/servo/can-bus/" target="_blank" rel="noopener noreferrer">FashionStar CAN 协议</a></li>
           <li><a href="https://fashionstar.com.cn/wiki/protocols/servo/uart-rs485/" target="_blank" rel="noopener noreferrer">FashionStar UART/RS-485 协议</a></li>
           <li><a href="https://fashionstar.com.cn/wiki/software/servo/canbus-web-config-tool/" target="_blank" rel="noopener noreferrer">FashionStar CAN 配置工具</a></li>
@@ -366,7 +762,7 @@
         </ul>
       </section>
     </main>
-    <footer><span>motorbridge · FashionStar 双协议软件交付验收</span><span>2026-11-11 · main 4741f28 → feat/fashionstar-unified</span></footer>
+    <footer><span>motorbridge · FashionStar 接入验收报告 v2</span><span>2026-11-11 · 双协议交付 · 使用指南 · 真机成果</span></footer>
   </article>
 </body>
 </html>
