@@ -229,12 +229,13 @@ Hexfellow modes:\n\
 \n\
 FashionStar modes:\n\
   --mode scan | ping | enable | disable | stop | status | pos-vel | zero | read-param | write-param\n\
-  Configuration changes require a power cycle; continuous velocity and quantitative torque control are currently unsupported.\n\n\
+  CAN/UART ID and baud changes are immediate; other CAN configuration follows the power-cycle procedure; continuous velocity and quantitative torque control are currently unsupported.\n\n\
 Common args:\n\
-  --transport   auto|socketcan|socketcanfd|mcu-serial|dm-serial|dm-device|uart (default auto; dm-serial/dm-device are Damiao-only, mcu-serial is classic-CAN-only)\n\
+  --transport   auto|socketcan|socketcanfd|mcu-serial|dm-serial|dm-device|uart|uc06 (default auto; dm-serial/dm-device are Damiao-only, mcu-serial is classic-CAN-only)\n\
   --channel      default can0\n\
   --serial-port  default /dev/ttyACM0 (used by serial transports)\n\
   --serial-baud  default 921600 (used by serial transports)\n\
+  --can-bitrate  default 1000000 (UC-06 CAN bit/s; USB serial is fixed at 1 Mbps)\n\
   --dm-device-type  usb2canfd|usb2canfd-dual|linkx4c, default usb2canfd-dual (used when --transport dm-device)\n\
   --dm-channel      SDK channel number: usb2canfd=0, usb2canfd-dual=0|1, linkx4c=0|1|2|3 (control default 0; scan omitted scans all)\n\
   --model        default depends on vendor (damiao=4340, robstride=rs-00, robstride_cia402=rs-00, robstride_mit=rs-00, hightorque=hightorque[hint only], myactuator=X8, fashionstar=fashionstar)\n\
@@ -247,7 +248,7 @@ ID change support by vendor:\n\
   Damiao: supported (`--set-motor-id` and optional `--set-feedback-id`)\n\
   RobStride: supported (`--set-motor-id`)\n\
   HighTorque / Hexfellow / MyActuator: not supported in unified CLI path\n\
-  FashionStar: supported (`--set-motor-id`); CAN: power-cycle required; UART: immediate\n\n\
+  FashionStar: supported (`--set-motor-id`); CAN/UART: immediate; wait 120 ms before verifying the new CAN ID\n\n\
 Damiao extras:\n\
   --verify-model 1/0, default 1\n\
   --verify-timeout-ms  default 500\n\

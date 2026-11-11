@@ -9,7 +9,7 @@ Practical reference for FashionStar CAN and UART/RS-485 control in motorbridge.
 - Vendor: `fashionstar`. Model `fashionstar` selects CAN; model `uart` selects native UART/RS-485. The following CAN settings apply to the default model.
 - Classic CAN, standard 11-bit arbitration ID **0x321** for both directions. `motor_id` is the ServoID in the payload, **0..254**; 255 is not accepted as an individual motor.
 - `feedback_id` is fixed at `0x321` (801), independent of ServoID.
-- Transports: `auto`, `socketcan`, `mcu-serial`. The MCU firmware must implement motorbridge's existing serial protocol. The official UC-06 web tool uses a different serial wrapper.
+- Transports: `auto`, `socketcan`, `mcu-serial`, `uc06`. The MCU firmware must implement motorbridge's existing serial protocol. UC-06 uses its own serial framing through `--transport uc06` (see section 7).
 - Match the bus bitrate to the servo's configured value (documented default: 500 kbit/s). Linux uses a preconfigured `can0`; PCAN channels can specify `can0@500000`.
 
 ## 2) Supported `motor_cli` Modes
@@ -52,21 +52,22 @@ motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode pos-vel --pos 
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode stop
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode read-param --param-id 0x81 --param-type u32
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --set-motor-id 2
-# Power-cycle the servo, then connect with the new ServoID:
+# Wait 120 ms for the ID change, then connect with the new ServoID:
+sleep 0.12
 motor_cli --vendor fashionstar --channel can0 --motor-id 2 --mode ping
 ```
 
 ## 5) Registers, State and Configuration
 
-The adapter sends position mode `0x52=2`, signed target `0x53/0x54`, speed limit `0x58`, then execute `0x59=1`. Target position uses signed 32-bit units of 0.1°. Configured power and acceleration are preserved.
+The adapter sends position mode `0x52=2`, signed target `0x53/0x54`, speed limit `0x58`, acceleration/deceleration `0x56/0x57=20` ms, then execute `0x59=1`. Target position uses signed 32-bit units of 0.1°. The 20 ms ramps follow the official tool defaults. Configured power is preserved.
 
 The existing u32 register interface combines low/high registers for addresses `0x03`, `0x15`, `0x50`, `0x53`; other supported addresses carry 16-bit raw values. Signed values use the two's-complement representation of their register width. Address permissions and documented value ranges are checked before transmission. PID registers `0xC8..0xD5` are automatically unlocked, accessed and relocked; unlock settling takes 400 ms before waiting for a reply.
 
 Unified state contains position, status, estimated velocity (`vel`, rad/s), current (`torq`, A) and servo temperature (`t_mos`, °C). Velocity is the average between consecutive complete position samples; the first sample, or the first sample after a failed query or an origin/turn-count reset, has no velocity estimate. Current register `0x11` uses mA in the official CAN SDK and web tool; dividing by 1000 gives A. As with MyActuator, `torq` carries current, not torque in N·m. Temperature uses the official CAN tool's default NTC conversion (B=3435, T0=298.15 K, ADC full scale 4096); ADC values outside 1..4095 are invalid. The single servo temperature follows the existing single-temperature vendor mapping to `t_mos`; `t_rotor` remains unavailable. Unavailable values are `NaN` in the C ABI/Python/C++ and `null` in WS JSON. No state is reported until a complete position/status/temperature/current query succeeds. `stop` holds position; `disable` releases output.
 
-**CAN configuration changes require a power cycle.** A successful write means that the request was sent. ID register `0x81` does not retarget the live handle: power-cycle, recreate the controller/motor with the new ID, then verify. Bitrate changes likewise require a power cycle and a matching host bitrate. Runtime target/execute/stop commands do not require a power cycle. There is no separate defined store command in this adapter.
+**CAN ServoID (`0x81`) and bitrate (`0x82`) changes take effect without a power cycle and persist across power cycles.** After writing, wait 120 ms as in the official tool, then reconnect with the new ID and matching host bitrate to verify the model and changed register; the old handle retains its original settings. A successful write means that the request was sent. Other CAN configuration follows the power-cycle procedure. Runtime target/execute/stop commands do not require a power cycle. There is no separate defined store command in this adapter.
 
-Python SDK/CLI examples: [FASHIONSTAR_API.md](../bindings/python/FASHIONSTAR_API.md). WS uses existing `set_target`, `pos_vel`, `state_once`, `get_register_u32`, `write_register_u32`, `scan`, `set_id`, `verify`; CAN `set_id` returns `verified:false` and `requires_power_cycle:true`. The default `param_stream` reads voltage (`0x10`), current (`0x11`), power (`0x12`), temperature (`0x13`), status (`0x14`), multi-turn position (`0x15/0x16`), turn count (`0x17`) and single-turn angle (`0x18`) as raw register values.
+Python SDK/CLI examples: [FASHIONSTAR_API.md](../bindings/python/FASHIONSTAR_API.md). WS uses existing `set_target`, `pos_vel`, `state_once`, `get_register_u32`, `write_register_u32`, `scan`, `set_id`, `verify`; `set_id` returns `verified:false` and `requires_power_cycle:false` for both CAN and UART; use the new ID with `verify` to confirm the change. Raw writes to `0x81`/`0x82` also return `requires_power_cycle:false` and stop periodic motion commands; use `set_target` with the new connection settings before resuming. The default `param_stream` reads voltage (`0x10`), current (`0x11`), power (`0x12`), temperature (`0x13`), status (`0x14`), multi-turn position (`0x15/0x16`), turn count (`0x17`) and single-turn angle (`0x18`) as raw register values.
 
 ## 6) Native UART/RS-485
 
@@ -84,7 +85,19 @@ motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/
 
 WS uses the same operations and parameter IDs. Set `model:"uart"`, `transport:"uart"`, `serial_port` and `serial_baud:115200`; keep `feedback_id:801` or omit it.
 
-## 7) Protocol References
+## 7) UC-06 USB-to-CAN
+
+The [UC-06 adapter](https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/) connects FashionStar CAN servos through a USB serial port. Use `--transport uc06 --model fashionstar`; the existing CAN commands, state and parameter interfaces apply. PCAN/CANable continue to use `auto`/`socketcan`, and the MCU bridge continues to use `mcu-serial`.
+
+USB serial is fixed at 1000000 baud, 8-N-1; `--serial-baud` is unused for UC-06. `--can-bitrate` selects the adapter's CAN bitrate in bit/s (default 1000000): 50000, 100000, 125000, 200000, 250000, 400000, 500000, 750000, 800000 or 1000000. Match the servo's bitrate; opening the adapter does not write the servo's configuration.
+
+```bash
+motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --motor-id 0 --mode status
+```
+
+Rust uses `FashionstarController::new_uc06(port, can_bitrate)`. C uses `motor_controller_new_uc06(port, can_bitrate)`; Python and C++ use `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`, then add a `fashionstar` motor with feedback ID `0x321`. WS accepts `transport:"uc06"`, `serial_port` and `can_bitrate` in `set_target`, `scan`, `set_id` and `verify`.
+
+## 8) Protocol References
 
 - [Official CAN protocol](https://fashionstar.com.hk/wiki/protocols/servo/can-bus/) ([中文](https://fashionstar.com.cn/wiki/protocols/servo/can-bus/))
 - [Official SDKs](https://fashionstar.com.cn/wiki/sdk/servo/)

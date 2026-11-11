@@ -12,6 +12,7 @@ fn open_fashionstar_controller(
     channel: &str,
     serial_port: &str,
     serial_baud: u32,
+    can_bitrate: u32,
 ) -> Result<FashionstarController, Box<dyn std::error::Error>> {
     let p = TransportParams {
         channel,
@@ -22,6 +23,7 @@ fn open_fashionstar_controller(
         "auto" | "socketcan" => open_transport(Transport::SocketCan, &p)?,
         "mcu-serial" => open_transport(Transport::McuSerial, &p)?,
         "uart" => return Ok(FashionstarController::new_uart(serial_port, serial_baud)?),
+        "uc06" => return Ok(FashionstarController::new_uc06(serial_port, can_bitrate)?),
         "socketcanfd" => {
             return Err(
                 "transport socketcanfd unsupported (fashionstar uses standard CAN only)".into(),
@@ -29,13 +31,13 @@ fn open_fashionstar_controller(
         }
         "dm-serial" | "dm-device" => {
             return Err(format!(
-                "transport {transport} is damiao-only (fashionstar supports auto|socketcan|mcu-serial|uart)"
+                "transport {transport} is damiao-only (fashionstar supports auto|socketcan|mcu-serial|uart|uc06)"
             )
             .into());
         }
         _ => {
             return Err(format!(
-                "unknown FashionStar transport: {transport} (expected auto|socketcan|mcu-serial|uart)"
+                "unknown FashionStar transport: {transport} (expected auto|socketcan|mcu-serial|uart|uc06)"
             )
             .into());
         }
@@ -89,6 +91,8 @@ pub fn run_fashionstar(
     let serial_baud_u64 = get_u64(args, "serial-baud", 921600)?;
     let serial_baud = u32::try_from(serial_baud_u64)
         .map_err(|_| format!("invalid --serial-baud (too large): {serial_baud_u64}"))?;
+    let can_bitrate = u32::try_from(get_u64(args, "can-bitrate", 1000000)?)
+        .map_err(|_| "invalid --can-bitrate (too large)")?;
     let timeout_ms = get_u64(args, "timeout-ms", 500)?;
     let timeout = Duration::from_millis(timeout_ms);
 
@@ -104,8 +108,13 @@ pub fn run_fashionstar(
         if start_id > end_id || end_id > 254 {
             return Err("invalid scan range: expected 0..254 and start<=end".into());
         }
-        let controller =
-            open_fashionstar_controller(&transport, channel, &serial_port, serial_baud)?;
+        let controller = open_fashionstar_controller(
+            &transport,
+            channel,
+            &serial_port,
+            serial_baud,
+            can_bitrate,
+        )?;
         let mut hits = 0usize;
         for id in start_id..=end_id {
             let motor = controller.add_motor(id, CAN_ID, model)?;
@@ -123,11 +132,12 @@ pub fn run_fashionstar(
         return Ok(());
     }
 
-    let controller = open_fashionstar_controller(&transport, channel, &serial_port, serial_baud)?;
+    let controller =
+        open_fashionstar_controller(&transport, channel, &serial_port, serial_baud, can_bitrate)?;
     let motor = controller.add_motor(motor_id, feedback_id, model)?;
     if let Some(new_motor_id) = set_motor_id {
         motor.write_register_u32(0x81, u32::from(new_motor_id))?;
-        println!("[id-set] FashionStar device id update requested: {motor_id} -> {new_motor_id}; reconnect with the new ID (CAN: power-cycle first; UART: change is immediate)");
+        println!("[id-set] FashionStar device id update requested: {motor_id} -> {new_motor_id}; ID changes without a power cycle; wait 120 ms, then verify with the new ID");
         controller.close_bus()?;
         return Ok(());
     }
@@ -167,7 +177,7 @@ pub fn run_fashionstar(
                         .map_err(|e| format!("invalid --param-value: {e}"))?
                 };
                 motor.write_register_u32(rid, value)?;
-                println!("param 0x{param_id:04X} (u32) = {value}; CAN: power-cycle to apply; UART ID/baud: reconnect with the new settings");
+                println!("param 0x{param_id:04X} (u32) = {value}; CAN ID/baud: wait 120 ms, then reconnect with the new settings; other CAN configuration: power-cycle; UART ID/baud: reconnect with the new settings");
             }
             _ => return Err(format!("unknown FashionStar mode: {mode}").into()),
         }

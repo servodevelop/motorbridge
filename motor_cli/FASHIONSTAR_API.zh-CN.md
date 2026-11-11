@@ -9,7 +9,7 @@
 - 厂商标识：`fashionstar`。默认型号 `fashionstar` 使用 CAN，型号 `uart` 使用原生 UART/RS-485。以下 CAN 设置适用于默认型号。
 - 经典 CAN，收发均使用标准 11-bit 仲裁 ID **0x321**。`motor_id` 是数据区的 ServoID，范围 **0..254**；不接受 255 作为单电机 ID。
 - `feedback_id` 固定为 `0x321`（801），与 ServoID 无关。
-- 链路：`auto`、`socketcan`、`mcu-serial`。MCU 固件必须使用 motorbridge 已有串口协议，不能直接使用官方网页工具的 UC-06 串口封装。
+- 链路：`auto`、`socketcan`、`mcu-serial`、`uc06`。MCU 固件使用 motorbridge 已有串口协议；UC-06 使用专用串口封装，通过 `--transport uc06` 接入（见第 7 节）。
 - 主机与舵机波特率必须一致，官方默认值为 500 kbit/s。Linux 先配置 `can0`；PCAN 可指定 `can0@500000`。
 
 ## 2）`motor_cli` 支持模式
@@ -52,21 +52,22 @@ motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode pos-vel --pos 
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode stop
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --mode read-param --param-id 0x81 --param-type u32
 motor_cli --vendor fashionstar --channel can0 --motor-id 0 --set-motor-id 2
-# 重新上电后，使用新 ServoID 验证：
+# 等待 ID 切换完成后，使用新 ServoID 验证：
+sleep 0.12
 motor_cli --vendor fashionstar --channel can0 --motor-id 2 --mode ping
 ```
 
 ## 5）寄存器、状态与配置
 
-POS_VEL 依次写入模式 `0x52=2`、有符号目标角度 `0x53/0x54`、速度限制 `0x58`，最后写 `0x59=1` 执行。角度单位为 signed32 的 0.1°，保留设备原有功率和加减速配置。
+POS_VEL 依次写入模式 `0x52=2`、有符号目标角度 `0x53/0x54`、速度限制 `0x58`、加减速时间 `0x56/0x57=20` ms，最后写 `0x59=1` 执行。角度单位为 signed32 的 0.1°，加减速时间沿用官方工具默认值 20 ms，保留设备原有功率配置。
 
 u32 寄存器接口在低字地址 `0x03`、`0x15`、`0x50`、`0x53` 自动组合低高两个寄存器，其他已支持地址传输 16-bit 原始值。有符号值按对应寄存器位宽的补码传入。发送前检查地址权限和文档明确的范围。PID 参数 `0xC8..0xD5` 自动解锁、访问并重新上锁；解锁稳定等待共 400 ms，之后开始等待回包。
 
 统一状态包含位置、状态码、估算速度（`vel`，rad/s）、电流（`torq`，A）和舵机温度（`t_mos`，℃）。速度是相邻完整位置采样之间的平均角速度；首次采样、查询失败或零点/圈数重置后的首次采样没有速度估算。电流寄存器 `0x11` 按官方 CAN SDK 和网页工具的 mA 单位除以 1000 换算为 A；与 MyActuator 一样，`torq` 表示电流，不表示 N·m 力矩。温度采用官方 CAN 工具默认 NTC 换算（B=3435、T0=298.15 K、ADC 满量程 4096），1..4095 之外的 ADC 值无效。单一舵机温度沿用项目其他单温度厂商的约定映射到 `t_mos`；`t_rotor` 仍无有效值。无效值在 C ABI/Python/C++ 中为 `NaN`，在 WS JSON 中为 `null`；完整位置/状态/温度/电流查询成功前没有有效快照。`stop` 停止锁力，`disable` 卸力。
 
-**CAN 配置修改需要重新上电后生效。** 写入成功表示请求已发送。修改 ID 寄存器 `0x81` 后，当前句柄仍使用旧 ID；重新上电后，以新 ID 重新创建控制器和舵机句柄再验证。波特率修改同样需重新上电，并同步主机波特率。运行时目标、执行、停止指令不需要重新上电。当前协议接入没有独立保存命令。
+**CAN ServoID（`0x81`）和波特率（`0x82`）修改无需重新上电，并在断电后保留。** 写入后参照官方工具等待 120 ms，按新 ID 和匹配的主机速率重连，读取型号与修改的寄存器验证；原句柄仍保留旧配置。写入成功表示请求已发送。其他 CAN 配置仍按重新上电流程处理。运行时目标、执行、停止指令不需要重新上电。当前协议接入没有独立保存命令。
 
-Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONSTAR_API.zh-CN.md)。WS 复用已有 `set_target`、`pos_vel`、`state_once`、`get_register_u32`、`write_register_u32`、`scan`、`set_id`、`verify`；CAN `set_id` 返回 `verified:false`、`requires_power_cycle:true`。默认 `param_stream` 读取电压（`0x10`）、电流（`0x11`）、功率（`0x12`）、温度（`0x13`）、状态（`0x14`）、多圈位置（`0x15/0x16`）、圈数（`0x17`）和单圈角度（`0x18`），均返回寄存器原始值。
+Python SDK/CLI 示例见 [FASHIONSTAR_API.zh-CN.md](../bindings/python/FASHIONSTAR_API.zh-CN.md)。WS 复用已有 `set_target`、`pos_vel`、`state_once`、`get_register_u32`、`write_register_u32`、`scan`、`set_id`、`verify`；CAN 与 UART 的 `set_id` 均返回 `verified:false`、`requires_power_cycle:false`；使用新 ID 调用 `verify` 确认结果。原始写入 `0x81`/`0x82` 同样返回 `requires_power_cycle:false` 并停止周期运动发送；通过 `set_target` 设置新连接参数后再恢复控制。默认 `param_stream` 读取电压（`0x10`）、电流（`0x11`）、功率（`0x12`）、温度（`0x13`）、状态（`0x14`）、多圈位置（`0x15/0x16`）、圈数（`0x17`）和单圈角度（`0x18`），均返回寄存器原始值。
 
 ## 6）原生 UART/RS-485
 
@@ -84,7 +85,19 @@ motor_cli --vendor fashionstar --model uart --transport uart --serial-port /dev/
 
 WS 使用相同操作和参数编号。设置 `model:"uart"`、`transport:"uart"`、`serial_port` 和 `serial_baud:115200`；`feedback_id` 使用 801 或省略。
 
-## 7）协议来源
+## 7）UC-06 USB 转 CAN
+
+[UC-06 转接板](https://fashionstar.com.cn/wiki/servo-parts/boards/datasheet-uc-06/)通过 USB 串口连接 FashionStar CAN 舵机。使用 `--transport uc06 --model fashionstar`，控制、反馈和参数接口均复用现有 CAN 实现。PCAN/CANable 继续使用 `auto`/`socketcan`，MCU 转接板继续使用 `mcu-serial`。
+
+USB 串口固定 1000000 baud、8-N-1，UC-06 不使用 `--serial-baud`。`--can-bitrate` 设置转接板的 CAN 速率，单位 bit/s，默认 1000000；支持 50000、100000、125000、200000、250000、400000、500000、750000、800000、1000000。该速率需匹配舵机，打开转接板不会写入舵机配置。
+
+```bash
+motor_cli --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --motor-id 0 --mode status
+```
+
+Rust 使用 `FashionstarController::new_uc06(port, can_bitrate)`；C 使用 `motor_controller_new_uc06(port, can_bitrate)`；Python/C++ 使用 `Controller.from_uc06(port, can_bitrate)` / `Controller::from_uc06(port, can_bitrate)`，再添加 `fashionstar` 型号，反馈 ID 使用 `0x321`。WS 的 `set_target`、`scan`、`set_id`、`verify` 接受 `transport:"uc06"`、`serial_port` 和 `can_bitrate`。
+
+## 8）协议来源
 
 - [官方 CAN 协议](https://fashionstar.com.cn/wiki/protocols/servo/can-bus/)（[English](https://fashionstar.com.hk/wiki/protocols/servo/can-bus/)）
 - [官方各语言 SDK](https://fashionstar.com.cn/wiki/sdk/servo/)

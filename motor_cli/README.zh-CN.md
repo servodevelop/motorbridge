@@ -79,7 +79,7 @@ motor_cli -h
 ```bash
 motor_cli \
   --vendor <damiao|robstride|robstride_cia402|robstride_mit|hightorque|myactuator|hexfellow|fashionstar|all> \
-  --transport <auto|socketcan|socketcanfd|dm-serial|dm-device|uart> \
+  --transport <auto|socketcan|socketcanfd|dm-serial|dm-device|uart|uc06> \
   --channel <can0|can1|can0@1000000...> \
   --model <model-name> \
   --motor-id <id> --feedback-id <id> \
@@ -122,10 +122,11 @@ motor_cli \
 |---|---|---|---|
 | `--help` | flag | 关闭 | 输出帮助并退出 |
 | `--vendor` | string | `damiao` | `damiao` / `robstride` / `robstride_cia402` / `robstride_mit` / `hightorque` / `myactuator` / `hexfellow` / `fashionstar` / `all` |
-| `--transport` | string | `auto` | `auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` / `uart`（`socketcanfd` 为 Hexfellow 必需；`dm-serial`/`dm-device` 仅 Damiao） |
+| `--transport` | string | `auto` | `auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` / `uart` / `uc06`（`socketcanfd` 为 Hexfellow 必需；`dm-serial`/`dm-device` 仅 Damiao） |
 | `--channel` | string | `can0` | Linux：SocketCAN 网卡名（`can0`）；Windows（PCAN 后端）：`can0`/`can1`，可加 `@bitrate`（如 `can0@1000000`）；macOS（PCBUSB 后端）：`can0`/`can1` |
 | `--serial-port` | string | `/dev/ttyACM0` | 串口链路使用 |
 | `--serial-baud` | u64 | `921600` | 串口链路使用 |
+| `--can-bitrate` | u32 | `1000000` | UC-06 的 CAN 速率，单位 bit/s；USB 串口固定为 1000000 baud |
 | `--dm-device-type` | string | `usb2canfd-dual` | `--transport dm-device` 时使用；可选 `usb2canfd` / `usb2canfd-dual` / `linkx4c` |
 | `--dm-channel` | string | 控制默认 `0`；扫描不传则 all | `--transport dm-device` 时使用；`usb2canfd` 使用 `0`，`usb2canfd-dual` 使用 `0` / `1`，`linkx4c` 使用 `0` / `1` / `2` / `3`。`--mode scan` 时不传会扫描所选适配器的全部通道。 |
 | `--model` | string | 按 vendor 决定 | Damiao 默认 `4340`；RobStride / RobStride CiA402 / RobStride MIT 默认 `rs-00`；HighTorque 默认 `hightorque`；MyActuator 默认 `X8` |
@@ -727,7 +728,7 @@ motor_cli \
 
 ## 11. 厂商 = `fashionstar`
 
-CAN（`model=fashionstar`）或原生 UART/RS-485（`model=uart`、`transport=uart`）。ServoID 0..254；`feedback_id=0x321` 在 UART 中仅作接口占位。支持 POS_VEL、锁力/卸力、停止、设零、整数寄存器、位置/状态/温度/电流查询与估算速度反馈；`torq` 表示电流 A；CAN 配置修改需重新上电生效，UART 的 ID/波特率修改立即生效。连续速度与 MIT/定量力矩暂不支持。参数和命令示例见 [FASHIONSTAR_API.zh-CN.md](FASHIONSTAR_API.zh-CN.md)。
+CAN（`model=fashionstar`，UC-06 使用 `transport=uc06`）或原生 UART/RS-485（`model=uart`、`transport=uart`）。ServoID 0..254；`feedback_id=0x321` 在 UART 中仅作接口占位。支持 POS_VEL、锁力/卸力、停止、设零、整数寄存器、位置/状态/温度/电流查询与估算速度反馈；`torq` 表示电流 A；CAN/UART 的 ID、波特率修改立即生效；其他 CAN 配置按重新上电流程处理。连续速度与 MIT/定量力矩暂不支持。参数和命令示例见 [FASHIONSTAR_API.zh-CN.md](FASHIONSTAR_API.zh-CN.md)。
 
 ## 12. 实用建议
 
