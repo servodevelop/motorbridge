@@ -33,6 +33,7 @@ typedef struct MotorStateMetadata {
 // - position: rad
 // - velocity: rad/s
 // - torque: Nm
+// - FashionStar torq: current in A
 //
 // Unified mode IDs for motor_handle_ensure_mode:
 // - 1: MIT
@@ -46,6 +47,7 @@ typedef struct MotorStateMetadata {
 // - RobStride
 // - MyActuator
 // - HighTorque (native ht_can v1.5.5)
+// - FashionStar (CAN, UART/RS-485 and UC-06)
 
 // Returns the last error message for the calling thread.
 //
@@ -71,6 +73,8 @@ MotorController* motor_controller_new_dm_device(const char* dm_device_type, cons
 MotorController* motor_controller_new_mcu_serial(const char* serial_port, uint32_t baud);
 // Native UART/RS-485 serial transport.
 MotorController* motor_controller_new_uart(const char* serial_port, uint32_t baud);
+// FashionStar UC-06 bridge: fixed 1 Mbps USB serial, CAN bitrate in bit/s.
+MotorController* motor_controller_new_uc06(const char* serial_port, uint32_t can_bitrate);
 void motor_controller_free(MotorController* controller);
 int32_t motor_controller_poll_feedback_once(MotorController* controller);
 int32_t motor_controller_enable_all(MotorController* controller);

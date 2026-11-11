@@ -20,10 +20,7 @@ def _fashionstar_controller(args: argparse.Namespace):
     try:
         yield ctrl
     finally:
-        try:
-            ctrl.close_bus()
-        finally:
-            ctrl.close()
+        ctrl.close()
 
 
 def _run_fashionstar(args: argparse.Namespace) -> None:
@@ -57,7 +54,7 @@ def _run_fashionstar(args: argparse.Namespace) -> None:
                 motor.write_register_u32(rid, value)
                 print(
                     f"command=run mode=write-param vendor=fashionstar param_id=0x{rid:X} "
-                    f"type=u32 value={value}; CAN: power-cycle to apply; UART ID/baud: reconnect with the new settings"
+                    f"type=u32 value={value}; CAN ID/baud: wait 120 ms, then reconnect with the new settings; other CAN configuration: power-cycle; UART ID/baud: reconnect with the new settings"
                 )
                 return
             for i in range(args.loop):

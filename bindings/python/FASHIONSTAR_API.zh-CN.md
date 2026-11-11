@@ -31,7 +31,7 @@ finally:
 - 使用已有 `enable()`（停止并保持）、`disable()`、`set_zero_position()`、`send_pos_vel(pos, vlim)`、`get_register_u32(rid, timeout_ms)`、`write_register_u32(rid, value)`。
 - `ensure_mode(Mode.POS_VEL)` 可用。VEL、MIT/定量力矩与 FORCE_POS 暂不支持；其他尚无协议映射的操作返回错误。
 - `vel` 由相邻位置采样估算；`torq` 沿用 MyActuator 的映射，表示电流 A（`0x11` 的 mA 值除以 1000）；`t_mos` 为按官方 CAN 工具默认公式换算的舵机温度（℃）。首次速度采样、无效温度与转子温度为 `NaN`。`torq` 不表示 N·m 力矩。
-- CAN 配置写入需要重新上电生效；UART 的 ID 和波特率修改立即生效并在断电后保留。写 `0x81` 或 `0x82` 后，关闭旧连接，按新配置创建连接并读取验证；CAN 舵机需先重新上电，当前句柄不会自动切换 ID。
+- CAN/UART 的 ID（`0x81`）与波特率（`0x82`）修改均立即生效并在断电后保留。CAN 写入后等待 120 ms，再按新 ID 和匹配的主机速率重连验证；其他 CAN 配置仍按重新上电流程处理。原句柄不会自动切换连接参数。
 
 ## Python CLI
 
@@ -43,7 +43,7 @@ motorbridge run --vendor fashionstar --channel can0 --motor-id 0 --mode read-par
 motorbridge id-set --vendor fashionstar --channel can0 --motor-id 0 --new-motor-id 2
 ```
 
-Python CLI 模式：`enable`、`disable`、`pos-vel`、`zero`、`set-zero`、`ping`、`read-param`、`write-param`；扫描和改 ID 使用已有 `scan`、`id-set` 子命令。`run --set-motor-id` 同样复用改 ID 流程。CLI 退出只关闭连接，不额外卸力。链路为 `auto|socketcan|mcu-serial`；UC-06 串口协议不能直接混用。
+Python CLI 模式：`enable`、`disable`、`pos-vel`、`zero`、`set-zero`、`ping`、`read-param`、`write-param`；扫描和改 ID 使用已有 `scan`、`id-set` 子命令。`run --set-motor-id` 同样复用改 ID 流程。CLI 退出只关闭连接，不额外卸力。CAN 链路为 `auto|socketcan|mcu-serial|uc06`；UC-06 用法见下文。
 
 ## 原生 UART/RS-485
 
@@ -59,4 +59,19 @@ motor = ctrl.add_fashionstar_motor(0, 0x321, "uart")
 ```bash
 motorbridge scan --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --start-id 0 --end-id 16
 motorbridge run --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode ping
+```
+
+## UC-06 USB 转 CAN
+
+使用 `Controller.from_uc06(serial_port, can_bitrate)` 和 `fashionstar` 型号。CAN 速率默认 1000000 bit/s；USB 串口固定 1000000 baud。CAN 速率需匹配舵机，原有 USB CAN 控制器和原生 UART 的创建入口保持独立。
+
+```python
+ctrl = Controller.from_uc06("/dev/ttyUSB0", 1000000)
+motor = ctrl.add_fashionstar_motor(0, 0x321, "fashionstar")
+```
+
+沿用上文 SDK 示例中的关闭流程，电机方法与现有 FashionStar CAN 一致。
+
+```bash
+motorbridge scan --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --start-id 0 --end-id 10
 ```

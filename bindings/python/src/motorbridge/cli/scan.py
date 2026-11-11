@@ -13,8 +13,10 @@ from .robstride import _robstride_host_id
 def _bus_hint(args: argparse.Namespace) -> str:
     """Bus locator for scan headers: serial_port for UART links, channel for CAN."""
     t = getattr(args, "transport", "auto")
-    if t in ("mcu-serial", "dm-serial"):
+    if t in ("mcu-serial", "dm-serial", "uart"):
         return f"serial_port={args.serial_port} serial_baud={args.serial_baud}"
+    if t == "uc06":
+        return f"serial_port={args.serial_port} can_bitrate={args.can_bitrate}"
     return f"channel={args.channel}"
 
 

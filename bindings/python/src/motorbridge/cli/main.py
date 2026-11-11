@@ -77,7 +77,7 @@ def _build_parser() -> argparse.ArgumentParser:
 
     set_id = sub.add_parser(
         "id-set",
-        help="change motor ID; Damiao supports ESC_ID/MST_ID, RobStride supports device_id, FashionStar CAN requires a power cycle; UART changes are immediate",
+        help="change motor ID; Damiao supports ESC_ID/MST_ID, RobStride supports device_id, FashionStar CAN/UART ID changes are immediate",
     )
     _add_common_args(set_id)
     set_id.add_argument("--new-motor-id", default="", help="new command/device ID, hex or decimal")
@@ -101,11 +101,12 @@ def _build_parser() -> argparse.ArgumentParser:
     scan.add_argument(
         "--transport",
         default="auto",
-        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart"],
+        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart", "uc06"],
         help="transport backend; dm-serial/dm-device are Damiao-only; mcu-serial is a vendor-agnostic UART-to-CAN MCU bridge",
     )
     scan.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for serial transports")
     scan.add_argument("--serial-baud", type=int, default=921600, help="baud rate for serial transports")
+    scan.add_argument("--can-bitrate", type=int, default=1000000, help="UC-06 CAN bitrate in bit/s; USB serial is fixed at 1 Mbps")
     scan.add_argument(
         "--dm-device-type",
         default="usb2canfd-dual",

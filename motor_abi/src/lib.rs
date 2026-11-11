@@ -34,7 +34,7 @@ const ABI_CAPABILITIES: &str = r#"{
     "name": "motor_abi",
     "version": "__MOTORBRIDGE_VERSION__"
   },
-  "transports": ["socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart"],
+  "transports": ["socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart", "uc06"],
   "vendors": ["damiao", "robstride", "myactuator", "hexfellow", "hightorque", "fashionstar"],
   "features": {
     "state_cache": true,
@@ -46,7 +46,7 @@ const ABI_CAPABILITIES: &str = r#"{
     "myactuator": ["param_i8", "param_u8", "param_u16", "param_u32", "param_f32"],
     "hexfellow": ["socketcanfd", "mit", "pos_vel"],
     "hightorque": ["mit", "vel", "pos_vel", "pos_vel_acc", "pos_classic", "torque", "dq_voltage", "dq_current", "brake", "set_run_mode", "write_register", "periodic_report", "request_register", "get_register", "fault_code"],
-    "fashionstar": ["uart", "pos_vel", "register_u32", "position_state", "stop", "set_zero", "power_cycle_config"]
+    "fashionstar": ["uart", "pos_vel", "register_u32", "position_state", "stop", "set_zero", "power_cycle_config", "uc06"]
   }
 }"#;
 
@@ -127,7 +127,8 @@ enum ControllerInner {
     // bytes from one tty input buffer.
     Bound(BoundController),
     UnboundUart { port: String, baud: u32 },
-    FashionstarUart(FashionstarController),
+    Fashionstar(FashionstarController),
+    UnboundUc06 { port: String, can_bitrate: u32 },
 }
 
 /// One shared `CoreController` plus lazily-created per-vendor controllers, all
@@ -228,8 +229,10 @@ fn ensure_bound(
             }
             Ok(b)
         }
-        ControllerInner::UnboundUart { .. } | ControllerInner::FashionstarUart(_) => Err(
-            "native UART controller cannot carry CAN motors".to_string(),
+        ControllerInner::UnboundUart { .. }
+        | ControllerInner::Fashionstar(_)
+        | ControllerInner::UnboundUc06 { .. } => Err(
+            "controller uses a FashionStar-only serial transport".to_string(),
         ),
         ControllerInner::Damiao(_) => Err(
             "controller already bound to Damiao (dm-serial/dm-device is damiao-only) — use a separate controller"
@@ -321,10 +324,14 @@ fn ensure_fashionstar_controller(
 ) -> Result<&mut FashionstarController, String> {
     if let ControllerInner::UnboundUart { port, baud } = inner {
         let controller = FashionstarController::new_uart(port, *baud).map_err(|e| e.to_string())?;
-        *inner = ControllerInner::FashionstarUart(controller);
+        *inner = ControllerInner::Fashionstar(controller);
+    } else if let ControllerInner::UnboundUc06 { port, can_bitrate } = inner {
+        let controller =
+            FashionstarController::new_uc06(port, *can_bitrate).map_err(|e| e.to_string())?;
+        *inner = ControllerInner::Fashionstar(controller);
     }
     match inner {
-        ControllerInner::FashionstarUart(controller) => Ok(controller),
+        ControllerInner::Fashionstar(controller) => Ok(controller),
         _ => {
             let bound = ensure_bound(inner, Vendor::Fashionstar)?;
             let core = Arc::clone(&bound.core);

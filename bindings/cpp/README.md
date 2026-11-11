@@ -47,6 +47,8 @@ feedback is available. Only complete state updates advance the sequence.
 
 For native FashionStar UART/RS-485, use `Controller::from_uart(serial_port, baud)` (default baud 115200), then `add_fashionstar_motor(motor_id, 0x321, "uart")`.
 
+For the UC-06 CAN/USB adapter, use `Controller::from_uc06(serial_port, can_bitrate)` (default CAN bitrate 1000000 bit/s), then `add_fashionstar_motor(motor_id, 0x321, "fashionstar")`. USB serial runs at 1 Mbps.
+
 ## Quick Start
 
 Damiao:

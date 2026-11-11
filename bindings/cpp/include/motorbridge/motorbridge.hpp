@@ -452,6 +452,15 @@ class Controller {
     return Controller(raw);
   }
 
+  static Controller from_uc06(const std::string& serial_port = "/dev/ttyUSB0",
+                              uint32_t can_bitrate = 1000000) {
+    MotorController* raw = motor_controller_new_uc06(serial_port.c_str(), can_bitrate);
+    if (!raw) {
+      throw Error("new_uc06 failed: " + last_error_message());
+    }
+    return Controller(raw);
+  }
+
   Controller(Controller&&) noexcept = default;
   Controller& operator=(Controller&&) noexcept = default;
   Controller(const Controller&) = delete;

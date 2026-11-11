@@ -63,6 +63,15 @@ class Controller:
         return self
 
     @classmethod
+    def from_uc06(cls, serial_port: str = "/dev/ttyUSB0", can_bitrate: int = 1000000) -> "Controller":
+        self = cls.__new__(cls)
+        self._abi = get_abi()
+        self._ptr = self._abi.lib.motor_controller_new_uc06(serial_port.encode(), int(can_bitrate))
+        if not self._ptr:
+            raise CallError(f"new_uc06 failed: {_err_text()}")
+        return self
+
+    @classmethod
     def from_dm_device(
         cls,
         dm_device_type: str = "usb2canfd-dual",

@@ -43,6 +43,8 @@
 
 FashionStar 原生 UART/RS-485 使用 `Controller::from_uart(serial_port, baud)`（默认波特率 115200），再调用 `add_fashionstar_motor(motor_id, 0x321, "uart")`。
 
+UC-06 CAN/USB 转接板使用 `Controller::from_uc06(serial_port, can_bitrate)`（默认 CAN 速率 1000000 bit/s），再调用 `add_fashionstar_motor(motor_id, 0x321, "fashionstar")`；USB 串口固定 1 Mbps。
+
 ## 快速开始
 
 Damiao:

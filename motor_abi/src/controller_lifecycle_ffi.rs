@@ -8,11 +8,13 @@ macro_rules! dispatch_controller {
             // Shared-core multi-vendor path: route to the one CoreController,
             // which iterates every device in its table regardless of vendor.
             ControllerInner::Bound(b) => b.core.$method().map_err(|e| e.to_string()),
-            ControllerInner::FashionstarUart(ctrl) => ctrl.$method().map_err(|e| e.to_string()),
+            ControllerInner::Fashionstar(ctrl) => ctrl.$method().map_err(|e| e.to_string()),
             ControllerInner::Unbound(_) => Err(
                 "controller has no motor; add a motor before calling this operation".to_string(),
             ),
-            ControllerInner::UnboundMcuSerial { .. } | ControllerInner::UnboundUart { .. } => Err(
+            ControllerInner::UnboundMcuSerial { .. }
+            | ControllerInner::UnboundUart { .. }
+            | ControllerInner::UnboundUc06 { .. } => Err(
                 "controller has no motor; add a motor before calling this operation".to_string(),
             ),
         }
@@ -176,6 +178,27 @@ pub extern "C" fn motor_controller_new_uart(
     }
     Box::into_raw(Box::new(MotorController {
         inner: Mutex::new(ControllerInner::UnboundUart { port, baud }),
+    }))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn motor_controller_new_uc06(
+    serial_port: *const c_char,
+    can_bitrate: u32,
+) -> *mut MotorController {
+    let port = match parse_cstr(serial_port, "serial_port") {
+        Ok(port) => port,
+        Err(e) => {
+            set_last_error(e);
+            return ptr::null_mut();
+        }
+    };
+    if port.is_empty() || can_bitrate == 0 {
+        set_last_error("UC-06 requires a serial port and positive CAN bitrate");
+        return ptr::null_mut();
+    }
+    Box::into_raw(Box::new(MotorController {
+        inner: Mutex::new(ControllerInner::UnboundUc06 { port, can_bitrate }),
     }))
 }
 

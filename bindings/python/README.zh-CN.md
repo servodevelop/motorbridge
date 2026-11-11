@@ -138,7 +138,7 @@
 | 顶层统一模式 | Damiao | RobStride | Hexfellow | MyActuator | HighTorque | FashionStar |
 | --- | --- | --- | --- | --- | --- | --- |
 | `Mode.MIT` | 原生 MIT | 原生 MIT | 原生 MIT（模式 5） | 不支持 | 映射到原生 pos+vel+tqe | 暂不支持 |
-| `Mode.POS_VEL` | 原生 POS_VEL | 映射到原生 Position（`run_mode=1` + `vel_max(0x7024)` + `loc_ref(0x7016)`） | 原生 POS_VEL（模式 1） | Position 设定流程 | 映射到原生 pos+vel+tqe | 原生模式 2（目标角度+速度限制） |
+| `Mode.POS_VEL` | 原生 POS_VEL | 映射到原生 Position（`run_mode=1` + `vel_max(0x7024)` + `loc_ref(0x7016)`） | 原生 POS_VEL（模式 1） | Position 设定流程 | 映射到原生 pos+vel+tqe | CAN 模式 2；UART 指令 `0x0F`（目标角度+速度限制） |
 | `Mode.VEL` | 原生 VEL | 原生 Velocity | 不支持 | 原生 Velocity 设定流程 | 原生速度命令 | 暂不支持 |
 | `Mode.FORCE_POS` | 原生 FORCE_POS | 不支持 | 不支持 | 不支持 | 映射到原生 pos+vel+tqe | 暂不支持 |
 
@@ -454,7 +454,7 @@ Python 示例中 Damiao 用法已覆盖到位：
 | HighTorque | `mit` | `--pos --vel --kp --kd --tau` | v2.0.0 位打包 MIT 帧（`0x18000 \| id`，固件 v4.6.0+）；超出打包量程的值饱和 |
 | Hexfellow | `mit` | `--pos --vel --kp --kd --tau` | CAN-FD 路径 |
 | Hexfellow | `pos-vel` | `--pos --vlim` | CAN-FD 路径 |
-| FashionStar | `pos-vel` | `--pos --vlim` | 原生模式 2；CAN 配置需重新上电后生效；UART 的 ID/波特率立即生效 |
+| FashionStar | `pos-vel` | `--pos --vlim` | CAN 模式 2；UART 指令 `0x0F`；CAN/UART 的 ID、波特率修改立即生效；其他 CAN 配置按重新上电流程处理 |
 
 RobStride `pos-vel` 的 `--vel`、`--kd`、`--tau` 是无效参数：该路径实际写入
 `limit_spd`、`loc_kp`、`loc_ref`。Rust CLI 和 Python CLI 在用户显式传入这些参数时会输出 warning。

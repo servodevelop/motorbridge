@@ -157,7 +157,7 @@ Packaging note:
 | Unified Mode | Damiao | RobStride | Hexfellow | MyActuator | HighTorque | FashionStar |
 | --- | --- | --- | --- | --- | --- | --- |
 | `Mode.MIT` | native MIT | native MIT | native MIT (mode 5) | unsupported | maps to native pos+vel+tqe | currently unsupported |
-| `Mode.POS_VEL` | native POS_VEL | maps to native Position (`run_mode=1` + `vel_max(0x7024)` + `loc_ref(0x7016)`) | native POS_VEL (mode 1) | Position setpoint flow | maps to native pos+vel+tqe | native mode 2 (target angle + speed limit) |
+| `Mode.POS_VEL` | native POS_VEL | maps to native Position (`run_mode=1` + `vel_max(0x7024)` + `loc_ref(0x7016)`) | native POS_VEL (mode 1) | Position setpoint flow | maps to native pos+vel+tqe | CAN: mode 2; UART: command `0x0F` (target angle + speed limit) |
 | `Mode.VEL` | native VEL | native Velocity | unsupported | native velocity setpoint flow | native velocity command | currently unsupported |
 | `Mode.FORCE_POS` | native FORCE_POS | unsupported | unsupported | unsupported | maps to native pos+vel+tqe | currently unsupported |
 
@@ -442,7 +442,7 @@ uses only the arguments that its native protocol understands.
 | HighTorque | `mit` | `--pos --vel --kp --kd --tau` | v2.0.0 bit-packed MIT frame (`0x18000 \| id`, firmware v4.6.0+); values beyond the packed range saturate |
 | Hexfellow | `mit` | `--pos --vel --kp --kd --tau` | CAN-FD path |
 | Hexfellow | `pos-vel` | `--pos --vlim` | CAN-FD path |
-| FashionStar | `pos-vel` | `--pos --vlim` | native mode 2; CAN configuration requires a power cycle; UART ID/baud changes are immediate |
+| FashionStar | `pos-vel` | `--pos --vlim` | CAN: mode 2; UART: command `0x0F`; CAN/UART ID and baud changes are immediate; other CAN configuration follows the power-cycle procedure |
 
 For RobStride `pos-vel`, `--vel`, `--kd`, and `--tau` are intentionally
 ignored because the firmware path is parameter-based (`limit_spd`, `loc_kp`,

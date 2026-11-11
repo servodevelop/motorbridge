@@ -31,7 +31,7 @@ This cleanup closes the connection. The existing `with Controller(...)` also cal
 - Use existing `enable()` (stop and hold), `disable()`, `set_zero_position()`, `send_pos_vel(pos, vlim)`, `get_register_u32(rid, timeout_ms)`, `write_register_u32(rid, value)`.
 - `ensure_mode(Mode.POS_VEL)` is available. VEL, MIT/quantitative torque and FORCE_POS are currently unsupported; operations without a protocol mapping return errors.
 - `vel` is estimated from consecutive position samples; `torq` carries current in A (`0x11` in mA divided by 1000), following MyActuator's mapping; `t_mos` is servo temperature in °C using the official CAN tool's default conversion. The first velocity sample, invalid temperature readings and rotor temperature are `NaN`. `torq` does not represent torque in N·m.
-- CAN configuration requires a power cycle. UART ID and baud changes take effect immediately and persist across power cycles. After writing `0x81` or `0x82`, close the old connection and recreate it with the new settings; power-cycle CAN servos first. The live handle retains its old ID.
+- CAN and UART ID (`0x81`) and baud (`0x82`) changes take effect immediately and persist across power cycles. For CAN, wait 120 ms, then reconnect with the new ID and matching host bitrate to verify. Other CAN configuration follows the power-cycle procedure. The live handle retains its old settings.
 
 ## Python CLI
 
@@ -43,7 +43,7 @@ motorbridge run --vendor fashionstar --channel can0 --motor-id 0 --mode read-par
 motorbridge id-set --vendor fashionstar --channel can0 --motor-id 0 --new-motor-id 2
 ```
 
-Python CLI modes: `enable`, `disable`, `pos-vel`, `zero`, `set-zero`, `ping`, `read-param`, `write-param`. Use existing `scan` and `id-set` subcommands; `run --set-motor-id` reuses the ID update flow. CLI cleanup closes the connection without an additional disable command. Transports: `auto|socketcan|mcu-serial`; the UC-06 serial protocol is different.
+Python CLI modes: `enable`, `disable`, `pos-vel`, `zero`, `set-zero`, `ping`, `read-param`, `write-param`. Use existing `scan` and `id-set` subcommands; `run --set-motor-id` reuses the ID update flow. CLI cleanup closes the connection without an additional disable command. CAN transports: `auto|socketcan|mcu-serial|uc06`; UC-06 usage is shown below.
 
 ## Native UART/RS-485
 
@@ -59,4 +59,19 @@ motor = ctrl.add_fashionstar_motor(0, 0x321, "uart")
 ```bash
 motorbridge scan --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --start-id 0 --end-id 16
 motorbridge run --vendor fashionstar --model uart --transport uart --serial-port /dev/ttyUSB0 --serial-baud 115200 --motor-id 0 --mode ping
+```
+
+## UC-06 USB-to-CAN
+
+Use `Controller.from_uc06(serial_port, can_bitrate)` with model `fashionstar`. The CAN bitrate defaults to 1000000 bit/s; the USB serial rate is fixed at 1000000 baud. Choose the bitrate configured on the servo. Existing USB CAN controllers and native UART remain separate entrypoints.
+
+```python
+ctrl = Controller.from_uc06("/dev/ttyUSB0", 1000000)
+motor = ctrl.add_fashionstar_motor(0, 0x321, "fashionstar")
+```
+
+Keep the SDK cleanup shown above. All existing FashionStar CAN motor methods apply.
+
+```bash
+motorbridge scan --vendor fashionstar --transport uc06 --serial-port /dev/ttyUSB0 --can-bitrate 1000000 --start-id 0 --end-id 10
 ```

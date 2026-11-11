@@ -73,7 +73,7 @@ def _id_set_command(args: argparse.Namespace) -> None:
                 motor.write_register_u32(0x81, new_motor_id)
             finally:
                 motor.close()
-        print("ID parameter written; reconnect with the new ID (CAN: power-cycle first; UART: change is immediate)")
+        print("ID parameter written; ID changes without a power cycle; wait 120 ms, then verify with the new ID")
         return
 
     print(

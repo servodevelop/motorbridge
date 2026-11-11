@@ -32,11 +32,12 @@ def _add_common_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--transport",
         default="auto",
-        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart"],
+        choices=["auto", "socketcan", "socketcanfd", "dm-serial", "dm-device", "mcu-serial", "uart", "uc06"],
         help="transport backend; dm-serial/dm-device are Damiao-only; mcu-serial is a vendor-agnostic UART-to-CAN MCU bridge (classic CAN only)",
     )
     p.add_argument("--serial-port", default="/dev/ttyACM0", help="serial port for serial transports")
     p.add_argument("--serial-baud", type=int, default=921600, help="baud rate for serial transports")
+    p.add_argument("--can-bitrate", type=int, default=1000000, help="UC-06 CAN bitrate in bit/s; USB serial is fixed at 1 Mbps")
     p.add_argument(
         "--dm-device-type",
         default="usb2canfd-dual",
@@ -167,8 +168,10 @@ def _open_controller(args: argparse.Namespace, vendor: str) -> Controller:
     transport = getattr(args, "transport", "auto")
     if transport == "uart":
         return Controller.from_uart(args.serial_port, int(args.serial_baud))
+    if transport == "uc06":
+        return Controller.from_uc06(args.serial_port, int(args.can_bitrate))
     if vendor == "fashionstar" and transport not in ("auto", "socketcan", "mcu-serial"):
-        raise ValueError("FashionStar supports classic CAN: auto|socketcan|mcu-serial")
+        raise ValueError("FashionStar supports auto|socketcan|mcu-serial|uart|uc06")
     if transport == "dm-serial":
         if vendor != "damiao":
             raise ValueError("transport=dm-serial is supported only for --vendor damiao")
