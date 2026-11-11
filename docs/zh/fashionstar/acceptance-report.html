@@ -510,16 +510,17 @@ ip -details link show can0</code></pre></div>
       <section id="integration">
         <h2><span class="num">06</span>进阶使用：Python、网页控制与设备配置</h2>
         <p>完成第 05 节的连接与扫描后，按应用需要选择：<a href="#guide-python">编写 Python 程序</a>、<a href="#guide-ws">使用 WebSocket 网页客户端</a>，或<a href="#guide-config">读取配置、改 ID 与置零</a>。</p>
-        <h3 id="guide-python">Python：运行一份完整的控制程序</h3>
-        <p>以下示例使用 <strong>UC-06、CAN 1 Mbps、ServoID 0</strong>。程序向绝对 90° 运动，速度上限 30°/s，读取 6 秒反馈，并在结束时卸力。Python 输出中的角度和速度已转换为 °、°/s，便于直接观察。</p>
+        <h3 id="guide-python">Python：完整连接并控制 FashionStar UART 舵机</h3>
+        <p>以下示例使用 <strong>FashionStar UART/RS-485 舵机、115200 baud、ServoID 0</strong>。程序向绝对 90° 运动，速度上限 30°/s，读取 6 秒反馈，并在结束时卸力。Python 输出中的角度和速度已转换为 °、°/s，便于直接观察。</p>
+        <p>连接分为两步：<code>Controller.from_uart(...)</code> 设置串口通道，<code>controller.add_fashionstar_motor(..., &quot;uart&quot;)</code> 在该通道上添加 <strong>FashionStar 厂商的 uart 子型号</strong>。下面的完整程序同时展示这两步。</p>
         <h4>第 1 步 · 构建 Python 使用的本地库</h4>
         <p>准备 Python 3.10+，在仓库根目录的终端执行以下命令。环境变量在当前终端生效，后续 Python 程序也在这个终端运行。</p>
 <div class="code-block" id="guide-python-build"><div class="code-label">终端 · 构建库并设置 Python 环境</div><pre><code class="language-bash">cargo build --release -p motor_abi
 export PYTHONPATH=&quot;$PWD/bindings/python/src${PYTHONPATH:+:$PYTHONPATH}&quot;
 export MOTORBRIDGE_LIB=&quot;$PWD/target/release/libmotor_abi.so&quot;</code></pre></div>
 <h4>第 2 步 · 将以下代码保存为 <code>fashionstar_demo.py</code></h4>
-<p>把文件放在仓库根目录。修改端口和 <code>motor_id</code>，使其与第 05 节扫描结果一致；UART 与标准 USB CAN 的替换方式列在代码下方。</p>
-<div class="code-block" id="guide-python-example"><div class="code-label">文件内容 · fashionstar_demo.py · 完整示例</div><pre><code class="language-python">import math
+<p>把文件放在仓库根目录。修改端口、串口速率和 <code>motor_id</code>，使其与第 05 节扫描结果一致；标准 USB CAN 与 UC-06 的替换方式列在代码下方。</p>
+<div class="code-block" id="guide-python-example"><div class="code-label">文件内容 · fashionstar_demo.py · FashionStar UART 完整示例</div><pre><code class="language-python">import math
 import time
 from motorbridge import Controller
 
@@ -527,13 +528,13 @@ motor_id = 0
 target_degrees = 90
 speed_degrees_per_second = 30
 
-# 本例使用 UC-06；端口和 CAN 速率与舵机连接一致。
-controller = Controller.from_uc06(&quot;/dev/ttyUSB0&quot;, 1000000)
-model = &quot;fashionstar&quot;
+# 1. 创建串口连接：填写实际端口和舵机当前波特率。
+controller = Controller.from_uart(&quot;/dev/ttyUSB0&quot;, 115200)
 
 # 离开 with 时，控制器会卸力并释放连接。
 with controller:
-    motor = controller.add_fashionstar_motor(motor_id, 0x321, model)
+    # 2. 添加 FashionStar 舵机，选择该厂商下的 uart 子型号。
+    motor = controller.add_fashionstar_motor(motor_id, 0x321, &quot;uart&quot;)
     try:
         motor.send_pos_vel(
             math.radians(target_degrees),
@@ -550,13 +551,13 @@ with controller:
             time.sleep(0.04)
     finally:
         motor.close()</code></pre></div>
-        <p><strong>换一种连接方式：</strong>将上面相邻的 <code>controller = ...</code> 和 <code>model = ...</code> 两行替换为对应内容，其余控制和反馈代码沿用。</p>
+        <p><strong>换一种连接方式：</strong>按下表替换程序中的 <code>controller = ...</code> 和 <code>motor = ...</code> 两行，保留它们各自的位置和缩进，其余控制和反馈代码沿用。三种连接都通过 <code>add_fashionstar_motor</code> 添加 FashionStar 舵机。</p>
         <div class="table-wrap"><table>
-          <thead><tr><th scope="col">连接方式</th><th scope="col">controller 这一行</th><th scope="col">model 这一行</th></tr></thead>
+          <thead><tr><th scope="col">连接方式</th><th scope="col">创建通信连接</th><th scope="col">添加 FashionStar 舵机</th></tr></thead>
           <tbody>
-            <tr><th scope="row">UART / RS-485</th><td><code>controller = Controller.from_uart("/dev/ttyUSB0", 115200)</code></td><td><code>model = "uart"</code></td></tr>
-            <tr><th scope="row">标准 USB CAN</th><td><code>controller = Controller("can0")</code></td><td><code>model = "fashionstar"</code></td></tr>
-            <tr><th scope="row">UC-06</th><td><code>controller = Controller.from_uc06("/dev/ttyUSB0", 1000000)</code></td><td><code>model = "fashionstar"</code></td></tr>
+            <tr><th scope="row">UART / RS-485</th><td><code>controller = Controller.from_uart("/dev/ttyUSB0", 115200)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, 0x321, "uart")</code></td></tr>
+            <tr><th scope="row">标准 USB CAN</th><td><code>controller = Controller("can0")</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, 0x321, "fashionstar")</code></td></tr>
+            <tr><th scope="row">UC-06</th><td><code>controller = Controller.from_uc06("/dev/ttyUSB0", 1000000)</code></td><td><code>motor = controller.add_fashionstar_motor(motor_id, 0x321, "fashionstar")</code></td></tr>
           </tbody>
         </table></div>
         <p>UART 的 115200 填写实际串口速率；UC-06 的 1000000 填写实际 CAN 速率；标准 USB CAN 沿用第 05 节配置好的 <code>can0</code>。<code>add_fashionstar_motor</code> 的三个参数依次是设备 ID、通信标识 <code>0x321</code>、协议型号；UART 也按接口约定填入 <code>0x321</code>。</p>
