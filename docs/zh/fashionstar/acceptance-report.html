@@ -1,0 +1,372 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="FashionStar CAN 与 UART/RS-485 舵机在 motorbridge 中的功能交付、main 分支差异、统一接口及软件验收结果。">
+  <meta name="color-scheme" content="light">
+  <title>FashionStar 舵机接入工作验收报告 · motorbridge</title>
+  <style>
+    :root { --ink:#111827; --muted:#17202a; --line:#d8e2e8; --paper:#fff; --wash:#f3f6f8; --accent:#176552; --soft:#eaf4ef; --navy:#163649; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; scroll-padding-top:24px; }
+    body { margin:0; background:#eaf0f3; color:var(--ink); font:16px/1.8 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei","Noto Sans CJK SC",sans-serif; }
+    a { color:#17638b; text-decoration:none; text-underline-offset:3px; }
+    a:hover { text-decoration:underline; }
+    a:focus-visible,button:focus-visible { outline:3px solid #418fba; outline-offset:4px; }
+    .toolbar { max-width:1152px; margin:auto; padding:20px 8px; display:flex; align-items:center; justify-content:space-between; gap:16px; color:var(--muted); font-size:14px; }
+    .toolbar strong { color:var(--ink); letter-spacing:.04em; }
+    button { border:1px solid #b8c8d2; border-radius:4px; padding:8px 17px; background:white; color:var(--ink); font:inherit; cursor:pointer; }
+    button:hover { background:var(--wash); }
+    .report { max-width:1152px; margin:0 auto 40px; background:var(--paper); box-shadow:0 8px 38px #2038490c; }
+    .cover { padding:44px 54px 32px; border-top:7px solid var(--navy); }
+    .eyebrow { color:var(--accent); font-size:14px; font-weight:750; letter-spacing:.15em; margin:0 0 12px; }
+    h1 { margin:0 0 8px; font-size:36px; line-height:1.4; letter-spacing:.01em; font-weight:750; }
+    .subtitle { margin:0 0 26px; color:var(--muted); font-size:19px; }
+    .meta { display:grid; grid-template-columns:1fr 1fr; gap:10px 30px; padding:18px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .meta div { display:flex; gap:14px; align-items:baseline; min-width:0; }
+    .meta dt { flex:0 0 70px; color:var(--muted); font-size:14px; }
+    .meta dd { margin:0; font-size:14px; overflow-wrap:anywhere; }
+    .lead { margin:24px 0 0; font-size:16px; line-height:1.95; }
+    .metrics { display:grid; grid-template-columns:repeat(4,1fr); gap:0; margin-top:26px; border:1px solid var(--line); }
+    .metric { padding:15px 20px; border-right:1px solid var(--line); }
+    .metric:last-child { border:0; }
+    .metric b { display:block; font-size:27px; line-height:1.4; color:var(--navy); font-variant-numeric:tabular-nums; }
+    .metric span { font-size:14px; color:var(--muted); }
+    nav { margin:0 54px; padding:16px 0; display:flex; flex-wrap:wrap; gap:8px 23px; border-bottom:1px solid var(--line); font-size:14px; }
+    nav a { color:var(--muted); }
+    main { padding:6px 54px 40px; }
+    section { margin-top:34px; }
+    h2 { display:flex; align-items:baseline; gap:12px; margin:0 0 17px; padding-bottom:11px; border-bottom:2px solid var(--navy); font-size:22px; line-height:1.5; }
+    h2 .num { font:600 14px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace; color:var(--accent); }
+    h3 { margin:22px 0 10px; font-size:17px; }
+    p { margin:10px 0; }
+    .small { font-size:14px; color:var(--muted); }
+    .subtitle,.meta dt,.meta dd,.metric span,nav,.small,.diagram .branch span,.diagram figcaption,.refs,footer { font-weight:500; }
+    .meta dt { font-weight:600; }
+    .summary { padding:18px 22px; border-left:4px solid var(--accent); background:var(--soft); margin:18px 0; }
+    .summary strong { display:block; color:var(--accent); margin-bottom:4px; font-size:15px; }
+    .summary p { margin:0; }
+    .table-wrap { width:100%; overflow-x:auto; margin:12px 0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; line-height:1.75; }
+    th,td { text-align:left; vertical-align:top; padding:11px 13px; border-bottom:1px solid var(--line); overflow-wrap:anywhere; }
+    thead th { background:var(--navy); color:#fff; font-weight:600; }
+    thead th:first-child { width:20%; }
+    tbody th { color:#000; background:#f4f7f8; font-weight:600; }
+    tbody tr:nth-child(even) td { color:#000; background:#fafcfd; }
+    .matrix th:first-child { width:17%; }
+    .matrix th:nth-child(2),.matrix th:nth-child(3) { width:33%; }
+    .matrix th:last-child { width:17%; }
+    .state th:first-child { width:16%; }
+    .state th:nth-child(2) { width:18%; }
+    code { font: .95em/1.55 ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace; background:#edf2f5; color:#000; padding:2px 4px; border-radius:3px; overflow-wrap:anywhere; }
+    thead code { color:inherit; background:#ffffff16; }
+    .ok { display:inline-block; padding:1px 7px; border-radius:3px; background:var(--soft); color:var(--accent); font-size:13px; font-weight:650; white-space:nowrap; }
+    .cols { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .panel { border:1px solid var(--line); padding:18px 21px; min-width:0; }
+    .panel h3 { margin:0 0 10px; font-size:17px; }
+    .panel p { font-size:14px; }
+    ul,ol { padding-left:20px; margin:10px 0; }
+    li { margin:6px 0; }
+    .panel li { font-size:14px; }
+    .diagram { color:#000; padding:22px; border:1px solid var(--line); background:#fafcfd; margin:16px 0; text-align:center; }
+    .diagram .top { border:1px solid #b8cbd4; padding:11px; background:#fff; font-weight:600; }
+    .diagram .arrow { padding:5px 0; color:#000; font-size:20px; line-height:1.3; }
+    .diagram .branches { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    .diagram .branch { padding:14px; border:1px solid #b8cbd4; background:#fff; }
+    .diagram .branch b { display:block; color:var(--accent); }
+    .diagram .branch span { display:block; margin-top:5px; color:var(--muted); font-size:14px; }
+    .diagram figcaption { text-align:left; font-size:14px; color:#000; margin-top:13px; }
+    .steps { list-style:none; padding:0; display:grid; grid-template-columns:repeat(4,1fr); gap:10px; counter-reset:step; }
+    .steps li { margin:0; color:#000; background:var(--wash); padding:13px 14px; font-size:14px; }
+    .steps li::before { counter-increment:step; content:"0" counter(step); display:block; margin-bottom:5px; color:var(--accent); font:700 14px/1.3 ui-monospace,Consolas,monospace; }
+    .steps b { display:block; font-size:14px; }
+    pre { margin:10px 0 0; padding:16px 18px; background:#f0f4f6; color:#000; border-left:3px solid #7895a4; font-size:14px; line-height:1.7; overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+    pre code { padding:0; background:transparent; font-size:inherit; }
+    .evidence td:last-child { width:80px; white-space:nowrap; }
+    .refs { display:grid; grid-template-columns:1fr 1fr; gap:7px 24px; list-style:none; padding:0; font-size:14px; }
+    .refs li { margin:0; }
+    .conclusion { margin-top:26px; padding:22px 24px; border:1px solid #b9d3c7; background:var(--soft); }
+    .conclusion h3 { margin:0 0 7px; color:var(--accent); }
+    .conclusion p { margin:0; }
+    footer { margin:0 54px; padding:18px 0 25px; border-top:1px solid var(--line); color:var(--muted); font-size:13px; display:flex; justify-content:space-between; gap:20px; }
+    @media screen and (max-width:760px) {
+      body { font-size:16px; }
+      .toolbar { padding:12px 18px; }
+      .cover { padding:25px 22px; }
+      h1 { font-size:27px; }
+      .subtitle { font-size:16px; }
+      .meta { grid-template-columns:1fr; gap:8px; }
+      .metrics { grid-template-columns:1fr 1fr; }
+      .metric:nth-child(2) { border-right:0; }
+      .metric:nth-child(-n+2) { border-bottom:1px solid var(--line); }
+      nav { margin:0 22px; gap:8px 16px; }
+      main { padding:0 22px 24px; }
+      footer { margin:0 22px; flex-direction:column; gap:4px; }
+      .cols,.refs { grid-template-columns:1fr; }
+      .steps { grid-template-columns:1fr 1fr; }
+      .matrix { min-width:690px; }
+      .diagram { padding:14px; }
+      .diagram .branches { gap:10px; }
+      h2 { font-size:20px; }
+      th,td { padding:9px 10px; }
+    }
+    @page { size:A4; margin:14mm 13mm 15mm; }
+    @media print {
+      html { scroll-behavior:auto; }
+      body { background:white; font-size:11pt; line-height:1.65; color:#111827; print-color-adjust:exact; -webkit-print-color-adjust:exact; }
+      .toolbar,nav { display:none; }
+      .report { max-width:none; margin:0; box-shadow:none; }
+      .cover { padding:18px 0 12px; border-top-width:4px; }
+      h1 { font-size:25pt; }
+      .subtitle { font-size:13pt; margin-bottom:16px; }
+      .lead { font-size:11pt; margin-top:16px; }
+      .meta { padding:12px 0; }
+      .meta dd { font-size:10pt; }
+      .metrics { margin-top:18px; }
+      .metric { padding:10px 12px; }
+      .metric b { font-size:20pt; }
+      main { padding:0; }
+      section { margin-top:22px; }
+      h2 { font-size:15pt; margin-bottom:11px; padding-bottom:7px; break-after:avoid; }
+      h3 { font-size:11pt; break-after:avoid; }
+      table { font-size:9.5pt; line-height:1.55; }
+      th,td { padding:7px 9px; }
+      thead { display:table-header-group; }
+      tr { break-inside:avoid; }
+      .table-wrap { overflow:visible; }
+      .matrix { min-width:0; }
+      .panel,.summary,.metrics,.diagram,.steps,.conclusion,pre,.meta { break-inside:avoid; }
+      .panel { padding:12px 14px; }
+      .panel p,.panel li { font-size:10pt; }
+      .small,.refs,.diagram figcaption { font-size:9.5pt; }
+      pre { font-size:9.5pt; }
+      .summary { padding:12px 16px; }
+      .diagram { padding:14px; }
+      .conclusion { padding:15px 18px; }
+      a { color:inherit; }
+      footer { margin:20px 0 0; font-size:9.5pt; padding-bottom:0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar"><strong>motorbridge / 交付验收</strong><button type="button" onclick="window.print()" aria-label="打印报告或保存为 PDF">打印 / 保存 PDF</button></div>
+  <article class="report">
+    <header class="cover">
+      <p class="eyebrow">SOFTWARE DELIVERY &amp; ACCEPTANCE REPORT</p>
+      <h1>FashionStar 舵机接入<br>工作验收报告</h1>
+      <p class="subtitle">CAN 与 UART/RS-485 双协议统一接入</p>
+      <dl class="meta">
+        <div><dt>项目</dt><dd>motorbridge · FashionStar 供应商接入</dd></div>
+        <div><dt>报告日期</dt><dd><time datetime="2026-11-11">2026 年 11 月 11 日</time></dd></div>
+        <div><dt>比较基线</dt><dd><code>main</code> · <code>4741f28</code></dd></div>
+        <div><dt>交付版本</dt><dd><code>feat/fashionstar-unified</code> · <code>7e8e2c3</code></dd></div>
+        <div><dt>验收内容</dt><dd>协议驱动、统一接口、功能映射、软件验证与使用文档</dd></div>
+        <div><dt>版本状态</dt><dd>已提交并推送至远端同名分支</dd></div>
+      </dl>
+      <p class="lead">本次工作将 <strong>FashionStar CAN 舵机与原生 UART/RS-485 舵机</strong>接入 motorbridge，建立统一的设备发现、位置运动控制、状态采集、参数配置和应用调用链路。上层使用同一组电机操作接口，底层由 FashionStar 驱动完成两种协议的编码、通信、解析与单位转换。</p>
+      <div class="metrics" aria-label="交付要点">
+        <div class="metric"><b>2 条</b><span>CAN / UART 协议路径</span></div>
+        <div class="metric"><b>POS_VEL</b><span>统一位置与速度上限控制</span></div>
+        <div class="metric"><b>241 项</b><span>Rust 工作区测试通过</span></div>
+        <div class="metric"><b>15 项</b><span>Python 接口与环境测试通过</span></div>
+      </div>
+    </header>
+
+    <nav aria-label="报告目录">
+      <a href="#delta">01 与 main 的差异</a><a href="#capabilities">02 功能验收矩阵</a><a href="#protocols">03 协议与状态映射</a><a href="#integration">04 接口与接入方式</a><a href="#verification">05 软件验证结果</a><a href="#delivery">06 交付清单与结论</a>
+    </nav>
+
+    <main>
+      <section id="delta">
+        <h2><span class="num">01</span>与 main 的差异：新增了什么</h2>
+        <p>以项目 <code>main@4741f28</code> 为基线，本分支新增 FashionStar 供应商，并完成 CAN、UART 两个型号入口及配套集成。代码差异包含 <strong>5 个提交、69 个文件</strong>，累计新增 3,417 行、删除 116 行。</p>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">交付维度</th><th scope="col">main 基线</th><th scope="col">本次交付</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">厂商接入</th><td>既有厂商驱动与统一控制框架</td><td>新增 <code>fashionstar</code> 供应商；<code>model=fashionstar</code> 对应 CAN，<code>model=uart</code> 对应 UART/RS-485。</td></tr>
+            <tr><th scope="row">协议与传输</th><td>CAN、CAN-FD 及已有串口转 CAN 桥接</td><td>新增 FashionStar CAN 协议驱动与原生 UART/RS-485 串口传输；两条路径分别处理各自的报文结构。</td></tr>
+            <tr><th scope="row">核心帧结构</th><td><code>CanFrame</code> 驱动的控制器与设备接口</td><td>核心按帧类型参数化，新增 <code>UartFrame</code>；沿用 <code>CanFrame</code> 的 8 字节数据结构。</td></tr>
+            <tr><th scope="row">功能与状态</th><td>通用电机控制及反馈接口</td><td>接入 FashionStar 位置控制、速度上限、保持、卸力、置零、位置/速度/电流/温度/状态反馈及参数读写。</td></tr>
+            <tr><th scope="row">应用调用</th><td>Rust、C ABI、Python、C++ 与 WebSocket 调用体系</td><td>新增 FashionStar 电机创建入口与 UART 控制器入口；扩展 Rust/Python CLI、WS 扫描、控制、状态和参数流。</td></tr>
+            <tr><th scope="row">工程交付</th><td>既有构建、测试及文档体系</td><td>增加 FashionStar 协议与回归测试、双协议功能说明、中英文接口文档，并完成跨接口联调和 Windows 编译检查。</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small">比较口径：<code>git diff main...7e8e2c3</code>。本报告使用上述确定的提交版本作为验收基准。</p>
+      </section>
+
+      <section id="capabilities">
+        <h2><span class="num">02</span>CAN 与 UART 功能验收矩阵</h2>
+        <p>两种协议均通过 <code>vendor=fashionstar</code> 接入，设备寻址范围为 <strong>ServoID 0–254</strong>。下表列出本次已实现的软件功能及其具体映射。</p>
+        <div class="table-wrap"><table class="matrix">
+          <thead><tr><th scope="col">功能项</th><th scope="col">CAN 舵机实现</th><th scope="col">UART/RS-485 舵机实现</th><th scope="col">交付状态</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">扫描与连通识别</th><td>遍历 ServoID，读取型号寄存器 <code>0x01</code>；提供 <code>scan</code>、<code>ping</code> 和 WS <code>verify</code>。</td><td>沿用同一操作流程，驱动将型号查询转换为原生 <code>0x03</code> 命令、参数地址 6。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">设备信息读取</th><td>读取型号、固件版本及序号；序号低/高字自动组合为 32 位值。</td><td>读取原生参数 6、7、8，并映射至相同的公共参数编号。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">多圈位置控制</th><td><code>POS_VEL</code> 映射到原生模式 2，依次写入模式、目标角度、速度上限及执行寄存器。</td><td><code>POS_VEL</code> 映射到原生 <code>0x0F</code> 命令，一次发送目标角度和速度上限。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">行程与速度上限</th><td>绝对目标范围 ±1024 圈；角度与速度原始分辨率分别为 0.1°、0.1°/s。</td><td>使用相同的目标范围、单位和数值校验规则；长行程旋转通过设置远距离目标完成。</td><td><span class="ok">统一参数语义</span></td></tr>
+            <tr><th scope="row">使能与停止保持</th><td><code>enable</code>、<code>stop</code> 写入 <code>0x7B=0x11</code>，保持当前位置。</td><td>发送 <code>0x18</code>，模式 <code>0x11</code>，保持当前位置。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">卸力</th><td><code>disable</code> 写入 <code>0x7B=0x10</code>，释放输出。</td><td>发送 <code>0x18</code>，模式 <code>0x10</code>，释放输出。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">当前位置置零</th><td>卸力后等待 50 ms，写入 <code>0x7A=0</code>，重建后续状态采样基线。</td><td>发送 <code>0x17</code> 原点设置命令，并重建后续状态采样基线。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">位置与速度反馈</th><td>读取多圈位置；依据连续有效位置采样及时间差计算平均速度。</td><td>通过 <code>0x16</code> 监控命令取得多圈位置；依据连续有效采样计算平均速度。</td><td><span class="ok">统一 rad / rad·s⁻¹</span></td></tr>
+            <tr><th scope="row">电流与温度反馈</th><td>读取电流和温度寄存器，换算为 A、°C。</td><td>从监控回包解析电流和温度 ADC，换算为 A、°C。</td><td><span class="ok">统一状态字段</span></td></tr>
+            <tr><th scope="row">电压、功率与状态</th><td>通过参数读取获取电压、功率、状态字、圈数及单圈角度。</td><td>将相同公共参数编号映射至 UART 参数或角度查询命令。</td><td><span class="ok">支持参数流读取</span></td></tr>
+            <tr><th scope="row">配置参数读写</th><td>覆盖通信配置、保护阈值、功率配置、上电行为、软启动和角度限制。</td><td>覆盖对应的原生 UART 配置参数，按实际 1/2/4 字节宽度读写。</td><td><span class="ok">两条路径已实现</span></td></tr>
+            <tr><th scope="row">ID 与通信速率设置</th><td>通过 <code>0x81</code> 设置 ServoID，通过 <code>0x82</code> 设置 CAN 波特率索引。</td><td>公共 <code>0x81/0x82</code> 分别映射到原生参数 34/36；UART 波特率索引为 1–8。</td><td><span class="ok">配置流程已接入</span></td></tr>
+            <tr><th scope="row">多舵机管理</th><td>支持同一控制器添加多个设备、按 ID 查询句柄及批量使能/卸力。</td><td>同一控制器管理多个设备，总线级事务锁串行协调请求和响应。</td><td><span class="ok">统一生命周期</span></td></tr>
+            <tr><th scope="row">WebSocket 集成</th><td>接入目标切换、扫描、控制、单次状态、状态流、参数流和改 ID。</td><td>复用同一组操作与公共参数编号，显式选择 <code>transport=uart</code>。</td><td><span class="ok">统一上层流程</span></td></tr>
+          </tbody>
+        </table></div>
+        <div class="summary"><strong>配置生效流程</strong><p>配置修改完成后重新上电，按新 ServoID 和通信速率建立连接，再读取型号及目标参数确认配置。位置运动、保持、卸力等运行控制按指令执行。</p></div>
+      </section>
+
+      <section id="protocols">
+        <h2><span class="num">03</span>协议实现与统一数据映射</h2>
+        <div class="cols">
+          <div class="panel">
+            <h3>CAN：完整寄存器访问链路</h3>
+            <ul>
+              <li>经典 CAN 标准帧，仲裁 ID 为 <code>0x321</code>，数据区携带 ServoID。</li>
+              <li>实现单寄存器及双寄存器读写，组合多圈角度、序号等 32 位参数。</li>
+              <li>实现运动参数块 <code>0x50–0x59</code> 的原始读写，覆盖时间、目标角度、功率、加减速时间、速度与执行控制。</li>
+              <li>提供阻尼功率、圈数重置、原点及参数复位的寄存器操作入口。</li>
+              <li>受保护 PID 区域 <code>0xC8–0xD5</code> 的访问由驱动完成解锁、操作与复锁。</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>UART/RS-485：原生串口协议链路</h3>
+            <ul>
+              <li>使用 <code>transport=uart</code>、8-N-1 和显式串口波特率；SDK 创建入口默认 115200。</li>
+              <li>实现请求/回应帧、长度检查、累加校验、分包组包及噪声重同步。</li>
+              <li>原生 <code>0x0F</code> 位置命令携带速度上限；加减速时间为 0，执行功率使用设备配置上限。</li>
+              <li>原生 <code>0x16</code> 监控回包集中提供位置、电流、温度、状态等数据。</li>
+              <li>同一控制器下的总线事务串行执行，发送间隔按 10 ms 管理，回复按命令、ServoID、参数地址和长度匹配。</li>
+            </ul>
+          </div>
+        </div>
+
+        <h3>统一状态：应用直接使用物理单位</h3>
+        <div class="table-wrap"><table class="state">
+          <thead><tr><th scope="col">应用字段</th><th scope="col">交付含义</th><th scope="col">处理方式</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>pos</code></th><td>多圈位置 / rad</td><td>解析有符号多圈角度，将协议中的 0.1° 单位换算为弧度。</td></tr>
+            <tr><th scope="row"><code>vel</code></th><td>估算平均速度 / rad/s</td><td>按 <code>Δ位置 ÷ Δ时间</code> 计算；从第二次连续有效采样起提供估算值，查询中断或置零后重新建立采样基线。</td></tr>
+            <tr><th scope="row"><code>torq</code></th><td>电流 / A</td><td>读取电流原始值 mA，除以 1000 后映射至统一字段；驱动内部字段名为 <code>current_a</code>。</td></tr>
+            <tr><th scope="row"><code>t_mos</code></th><td>舵机温度 / °C</td><td>按官方工具采用的 NTC 参数将 ADC 换算为摄氏度：B=3435、参考温度 298.15 K、ADC 满量程 4096。</td></tr>
+            <tr><th scope="row"><code>status_code</code></th><td>设备状态字</td><td>保留设备反馈的状态编码，便于应用层按协议识别运行状态。</td></tr>
+            <tr><th scope="row">快照元数据</th><td>更新序号、数据时效</td><td>完成整组状态查询后更新快照，复用 motorbridge 的反馈序号与数据年龄接口。</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small">电压、功率、圈数和单圈角度通过参数读取与 WS 参数流提供；位置、电流、温度、状态和估算速度进入统一电机状态接口。</p>
+
+        <h3>统一参数编号：转换集中在 FashionStar 驱动内</h3>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">公共参数编号</th><th scope="col">用途</th><th scope="col">CAN 映射</th><th scope="col">UART 映射</th></tr></thead>
+          <tbody>
+            <tr><th scope="row"><code>0x01 / 0x02</code></th><td>型号 / 固件</td><td>同名寄存器</td><td>原生参数 6 / 7</td></tr>
+            <tr><th scope="row"><code>0x03 / 0x04</code></th><td>序号 / 序号高字</td><td>低高字组合 / 高字读取</td><td>原生参数 8，按公共接口返回完整值或高字</td></tr>
+            <tr><th scope="row"><code>0x10–0x14</code></th><td>电压、电流、功率、温度 ADC、状态</td><td>同名寄存器</td><td>原生参数 1–5</td></tr>
+            <tr><th scope="row"><code>0x15–0x18</code></th><td>多圈角度、高字、圈数、单圈角度</td><td>角度及圈数寄存器</td><td><code>0x10</code> 多圈查询、<code>0x0A</code> 单圈查询</td></tr>
+            <tr><th scope="row"><code>0x81 / 0x82</code></th><td>ServoID / 波特率索引</td><td>同名寄存器</td><td>原生参数 34 / 36</td></tr>
+            <tr><th scope="row"><code>0x80, 0x83–0x89</code></th><td>控制回应、堵转及电压/温度/功率/电流保护</td><td>同名配置寄存器</td><td>原生参数 33、37–43</td></tr>
+            <tr><th scope="row"><code>0x8B, 0x8C, 0x8E–0x93</code></th><td>功率迟滞、上电锁力、软启动及角度限制</td><td>同名配置寄存器</td><td>原生参数 45、46、48–53</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small">UART 参数采用原生字节宽度。UART 的波特率索引 1–8 依次对应 9600、19200、38400、57600、115200、250000、500000、1000000 baud。</p>
+      </section>
+
+      <section id="integration">
+        <h2><span class="num">04</span>接口交付与接入方式</h2>
+        <figure class="diagram" aria-label="FashionStar 双协议软件架构">
+          <div class="top">应用入口：Rust API / CLI · C ABI · Python SDK / CLI · C++ · WebSocket</div>
+          <div class="arrow" aria-hidden="true">↕</div>
+          <div class="top">统一 FashionStar 控制器与电机接口<br><span class="small">设备识别 · POS_VEL · 保持/卸力 · 置零 · 状态 · 参数</span></div>
+          <div class="arrow" aria-hidden="true">↕</div>
+          <div class="branches">
+            <div class="branch"><b>CAN 型号</b><code>model=fashionstar</code><span>CAN 编码 / 寄存器读写</span><span><code>CoreController&lt;CanFrame&gt;</code></span><span>CAN 接口 / MCU 串口转 CAN</span></div>
+            <div class="branch"><b>UART 型号</b><code>model=uart</code><span>UART 命令 / 公共参数转换</span><span><code>CoreController&lt;UartFrame&gt;</code></span><span>原生串口 / UART / RS-485</span></div>
+          </div>
+          <figcaption>上层按 transport 选择连接，协议差异由 FashionStar 驱动处理。核心接收、设备分发与生命周期按帧类型复用。</figcaption>
+        </figure>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">接入层</th><th scope="col">本次交付的入口与能力</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Rust 驱动与 CLI</th><td><code>FashionstarController</code>、<code>FashionstarMotor</code>；命令覆盖 <code>scan</code>、<code>ping</code>、<code>status</code>、<code>enable</code>、<code>disable</code>、<code>stop</code>、<code>pos-vel</code>、<code>zero</code>、<code>read-param</code>、<code>write-param</code>，并支持 <code>--set-motor-id</code>。</td></tr>
+            <tr><th scope="row">C ABI</th><td>新增 <code>motor_controller_add_fashionstar_motor</code> 与 <code>motor_controller_new_uart</code>；复用位置控制、反馈、状态、参数和生命周期函数。</td></tr>
+            <tr><th scope="row">Python SDK / CLI</th><td><code>Controller.add_fashionstar_motor(...)</code>、<code>Controller.from_uart(...)</code>；SDK 复用电机方法，CLI 接入扫描、改 ID、位置控制、使能/卸力、置零、型号查询与参数读写。</td></tr>
+            <tr><th scope="row">C++</th><td><code>Controller::add_fashionstar_motor(...)</code>、<code>Controller::from_uart(...)</code>；复用 <code>Motor</code> 对象完成控制、状态及参数操作。</td></tr>
+            <tr><th scope="row">WebSocket</th><td>接入 <code>set_target</code>、<code>scan</code>、<code>verify</code>、<code>set_id</code>、<code>pos_vel</code>、<code>state_once</code>、状态流及 <code>param_stream</code>；参数流沿用统一编号。</td></tr>
+          </tbody>
+        </table></div>
+        <h3>连接参数与操作入口</h3>
+        <div class="cols">
+          <div class="panel"><h3>CAN</h3><p>使用已配置的 CAN 通道，<code>feedback_id=0x321</code>，<code>motor_id</code> 为设备 ServoID。</p><pre><code>motor_cli --vendor fashionstar \
+  --model fashionstar --transport socketcan \
+  --channel can0 --motor-id 0 --mode status</code></pre></div>
+          <div class="panel"><h3>UART / RS-485</h3><p>显式指定 <code>transport=uart</code> 和匹配的串口波特率；<code>feedback_id=0x321</code> 用作统一接口占位值，设备通过 ServoID 寻址。</p><pre><code>motor_cli --vendor fashionstar \
+  --model uart --transport uart \
+  --serial-port /dev/ttyUSB0 \
+  --serial-baud 115200 --motor-id 0 \
+  --mode status</code></pre></div>
+        </div>
+        <h3>统一配置操作流程</h3>
+        <ol class="steps">
+          <li><b>识别设备</b>选择链路，扫描 ServoID，读取型号和当前参数。</li>
+          <li><b>写入配置</b>使用公共参数编号设置 ID、通信速率或运行配置。</li>
+          <li><b>重新上电</b>按设备配置生效流程完成电源重启。</li>
+          <li><b>回读确认</b>使用新连接参数重新识别设备并核对目标配置。</li>
+        </ol>
+      </section>
+
+      <section id="verification">
+        <h2><span class="num">05</span>软件验证与验收结果</h2>
+        <p>验收采用<strong>源代码与协议核对、自动化测试、模拟 CAN 总线、伪串口通信和本地 WebSocket 联调</strong>，覆盖协议实现、统一接口及应用调用链路。</p>
+        <div class="table-wrap"><table class="evidence">
+          <thead><tr><th scope="col">验证项目</th><th scope="col">方法与覆盖内容</th><th scope="col">结果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Rust 工作区回归</th><td><code>cargo test --workspace --all-targets --offline</code>：241 项测试通过，包含 6 项 FashionStar 专属测试。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">FashionStar 协议测试</th><td>CAN 报文与状态回归；UART 命令编码、参数校验、公共编号转换、请求匹配、事务串行、状态换算与解码恢复。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">Python 接口与环境</th><td>15 项接口元数据、模块导入、平台传输和状态快照相关测试。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">跨接口串口联调</th><td>通过伪串口运行 Python/C ABI、Rust CLI、Python CLI 和 C++；检查命令、查询、配置、状态以及控制器关闭流程。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">WebSocket 联调</th><td>本地 WS 网关与伪串口联动，覆盖目标设置、控制、状态、默认参数流、设备扫描和 ID 写入。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">代码规范与静态检查</th><td>默认 <code>cargo fmt</code> 检查及工作区 <code>cargo clippy --all-targets -- -D warnings</code> 检查。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">Windows 编译检查</th><td>FashionStar 驱动、C ABI 与 Rust CLI 的 <code>x86_64-pc-windows-gnu</code> 全目标编译检查。</td><td><span class="ok">通过</span></td></tr>
+          </tbody>
+        </table></div>
+        <h3>关键验收检查点</h3>
+        <div class="cols">
+          <div class="panel"><h3>功能一致性</h3><ul><li>CAN 与 UART 使用相同的设备创建参数及电机操作语义。</li><li>多圈角度保留正负方向，位置、电流、温度按统一单位输出。</li><li>型号查询和 ID 设置复用公共参数编号，UART 原生地址转换集中在驱动。</li><li>WS 默认参数流覆盖电压、电流、功率、温度、状态、多圈位置、圈数和单圈角度。</li></ul></div>
+          <div class="panel"><h3>通信与数据一致性</h3><ul><li>校验错误、分段回包、噪声伪帧头及异常长度均纳入解码测试。</li><li>查询按设备、命令和参数匹配，超时后能够继续完成后续查询。</li><li>同一 UART 控制器下的多设备请求按事务串行执行。</li><li>设备 ID 由底层实现统一提供，状态元数据与实际寻址保持一致。</li></ul></div>
+        </div>
+        <p class="small">统计中的 6 项 FashionStar 测试已包含在 241 项 Rust 工作区测试中。验证记录与命令输出随项目保存在 <code>temp/fashionstar-uart-final-review/</code>。</p>
+      </section>
+
+      <section id="delivery">
+        <h2><span class="num">06</span>交付清单与验收结论</h2>
+        <div class="table-wrap"><table>
+          <thead><tr><th scope="col">交付对象</th><th scope="col">对应成果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">供应商驱动</th><td><code>motor_vendors/fashionstar/</code>：控制器、统一电机对象、CAN 编解码、寄存器规则、UART 电机逻辑及串口编解码。</td></tr>
+            <tr><th scope="row">核心扩展</th><td><code>motor_core/</code>：控制器、设备及总线按帧类型参数化，提供 <code>CanFrame</code> 与 <code>UartFrame</code> 两条类型化路径。</td></tr>
+            <tr><th scope="row">调用与工具</th><td><code>motor_abi/</code>、<code>motor_cli/</code>、<code>bindings/python/</code>、<code>bindings/cpp/</code>、<code>integrations/ws_gateway/</code>：统一创建、控制、反馈和参数操作。</td></tr>
+            <tr><th scope="row">使用文档</th><td>FashionStar 中英文 API 文档、Python SDK/CLI 示例、C++ 入口说明、WS 能力声明与协议说明。</td></tr>
+            <tr><th scope="row">版本与验证</th><td>交付提交 <code>7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae</code>；工作区测试、接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
+          </tbody>
+        </table></div>
+        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 双协议软件接入工作已完成。CAN 与 UART/RS-485 均已形成<strong>设备发现 → 位置控制 → 状态采集 → 参数配置 → 应用集成</strong>的完整软件链路，交付版本已提交并推送。各项已执行的软件验证通过，现有成果为业务应用统一调用、设备配置及后续型号接入提供了可复用的实现基础。</p></div>
+
+        <h3>版本与技术依据</h3>
+        <ul class="refs">
+          <li><a href="https://github.com/servodevelop/motorbridge/compare/4741f28d749817e5f976ff5ee1feccffd89be050...7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae" target="_blank" rel="noopener noreferrer">交付分支与 main 基线的代码差异</a></li>
+          <li><a href="https://github.com/servodevelop/motorbridge/tree/7e8e2c3da7fec1cc977cd28a1e011d876f4c55ae/motor_vendors/fashionstar" target="_blank" rel="noopener noreferrer">FashionStar 驱动交付源码</a></li>
+          <li><a href="https://fashionstar.com.hk/wiki/protocols/servo/can-bus/" target="_blank" rel="noopener noreferrer">FashionStar CAN 协议</a></li>
+          <li><a href="https://fashionstar.com.cn/wiki/protocols/servo/uart-rs485/" target="_blank" rel="noopener noreferrer">FashionStar UART/RS-485 协议</a></li>
+          <li><a href="https://fashionstar.com.cn/wiki/software/servo/canbus-web-config-tool/" target="_blank" rel="noopener noreferrer">FashionStar CAN 配置工具</a></li>
+          <li><a href="https://fashionstar.com.cn/wiki/software/servo/data/web-controller/" target="_blank" rel="noopener noreferrer">FashionStar UART 配置与监控工具</a></li>
+        </ul>
+      </section>
+    </main>
+    <footer><span>motorbridge · FashionStar 双协议软件交付验收</span><span>2026-11-11 · main 4741f28 → 7e8e2c3</span></footer>
+  </article>
+</body>
+</html>
