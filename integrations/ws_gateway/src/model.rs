@@ -52,6 +52,7 @@ pub(crate) enum Transport {
     DmDevice,
     McuSerial,
     Uart,
+    Uc06,
 }
 
 impl Transport {
@@ -66,6 +67,7 @@ impl Transport {
             "dm-device" => Ok(Self::DmDevice),
             "mcu-serial" => Ok(Self::McuSerial),
             "uart" => Ok(Self::Uart),
+            "uc06" => Ok(Self::Uc06),
             _ => Err(format!("unsupported transport: {s}")),
         }
     }
@@ -79,6 +81,7 @@ impl Transport {
             Self::DmDevice => "dm-device",
             Self::McuSerial => "mcu-serial",
             Self::Uart => "uart",
+            Self::Uc06 => "uc06",
         }
     }
 }
@@ -90,6 +93,7 @@ pub(crate) struct Target {
     pub(crate) channel: String,
     pub(crate) serial_port: String,
     pub(crate) serial_baud: u32,
+    pub(crate) can_bitrate: u32,
     pub(crate) dm_device_type: String,
     pub(crate) dm_channel: String,
     pub(crate) model: String,

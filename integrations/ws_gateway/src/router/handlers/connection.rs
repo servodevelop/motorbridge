@@ -107,7 +107,7 @@ fn handle_capabilities(ctx: &SessionCtx) -> Result<Value, String> {
                 ],
             },
             "fashionstar": {
-                "transports": ["auto", "socketcan", "mcu-serial", "uart"],
+                "transports": ["auto", "socketcan", "mcu-serial", "uart", "uc06"],
                 "models": ["fashionstar", "uart"],
                 "modes": ["pos_vel"],
                 "ops_unified": ["scan", "set_id", "enable", "disable", "stop", "state_once", "status", "verify"],
@@ -230,6 +230,7 @@ fn handle_set_target(v: &Value, ctx: &mut SessionCtx) -> Result<Value, String> {
         "channel": ctx.target.channel,
         "serial_port": ctx.target.serial_port,
         "serial_baud": ctx.target.serial_baud,
+        "can_bitrate": ctx.target.can_bitrate,
         "dm_device_type": ctx.target.dm_device_type,
         "dm_channel": ctx.target.dm_channel,
         "model": ctx.target.model,

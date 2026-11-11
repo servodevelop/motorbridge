@@ -47,7 +47,9 @@ pub(crate) fn open_damiao_controller(
             &base.dm_channel,
         )
         .map_err(|e| e.to_string()),
-        Transport::Uart => Err("native UART is unsupported by this vendor".to_string()),
+        Transport::Uart | Transport::Uc06 => {
+            Err("native UART and UC-06 are unsupported by this vendor".to_string())
+        }
     }
 }
 
@@ -78,7 +80,9 @@ pub(crate) fn open_robstride_controller(
         }
         Transport::DmSerial => Err("transport dm-serial is damiao-only".to_string()),
         Transport::DmDevice => Err("transport dm-device is damiao-only".to_string()),
-        Transport::Uart => Err("native UART is unsupported by this vendor".to_string()),
+        Transport::Uart | Transport::Uc06 => {
+            Err("native UART and UC-06 are unsupported by this vendor".to_string())
+        }
     }
 }
 
@@ -110,7 +114,9 @@ pub(crate) fn open_myactuator_controller(
         Transport::DmSerial | Transport::DmDevice => {
             Err("transport dm-serial/dm-device is damiao-only".to_string())
         }
-        Transport::Uart => Err("native UART is unsupported by this vendor".to_string()),
+        Transport::Uart | Transport::Uc06 => {
+            Err("native UART and UC-06 are unsupported by this vendor".to_string())
+        }
     }
 }
 
@@ -138,7 +144,9 @@ pub(crate) fn open_hexfellow_controller(
         Transport::McuSerial => {
             Err("transport mcu-serial is classic-CAN only; hexfellow requires CAN-FD".to_string())
         }
-        Transport::Uart => Err("native UART is unsupported by this vendor".to_string()),
+        Transport::Uart | Transport::Uc06 => {
+            Err("native UART and UC-06 are unsupported by this vendor".to_string())
+        }
     }
 }
 
@@ -165,7 +173,9 @@ pub(crate) fn open_hightorque_bus(
             motor_core::bus::open_transport(motor_core::bus::Transport::McuSerial, &p)
                 .map_err(|e| format!("open bus failed: {e}"))
         }
-        Transport::Uart => Err("native UART is unsupported by this vendor".to_string()),
+        Transport::Uart | Transport::Uc06 => {
+            Err("native UART and UC-06 are unsupported by this vendor".to_string())
+        }
     }
 }
 
@@ -194,6 +204,8 @@ pub(crate) fn open_fashionstar_controller(
             Err("transport dm-serial/dm-device is damiao-only".to_string())
         }
         Transport::Uart => FashionstarController::new_uart(&base.serial_port, base.serial_baud)
+            .map_err(|e| e.to_string()),
+        Transport::Uc06 => FashionstarController::new_uc06(&base.serial_port, base.can_bitrate)
             .map_err(|e| e.to_string()),
     }
 }

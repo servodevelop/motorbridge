@@ -66,7 +66,7 @@ If a vendor does not support one of these four baseline modes, gateway returns `
 | hexfellow | native MIT | native POS_VEL | unsupported | unsupported | `mit` supports `kp/kd/tau`; no standalone `vel` | CAN-FD path |
 | myactuator | unsupported | Position setpoint flow | native velocity setpoint | unsupported | `pos_vel` via position setpoint; `vel` in baseline set | native strengths: current/position/version/mode-query |
 | hightorque | native MIT (v2.0.0 bit-packed frame) | native POS_VEL (`0x07 0x35`) | native velocity frame | unsupported | all commands go through `motor_vendor_hightorque` (single implementation); feedback is physical units with model torque-coeff correction | additionally `pos_vel_acc` (trapezoid `07 2d`) and `torque` (`05 13`, physical Nm) modes plus `pos_classic`/`dq_voltage`/`dq_current`/`brake`/`run_mode`/`write_register`/`periodic_report`/`read_register` vendor ops; `enable` is a semantic no-op (plan B, 2026-10-08: succeeds without sending any frame) |
-| fashionstar | currently unsupported | native mode 2 (target angle + speed limit) | currently unsupported | currently unsupported | `pos` rad, `vlim` rad/s; raw u32 registers | CAN configuration requires a power cycle; UART ID/baud changes are immediate |
+| fashionstar | currently unsupported | CAN: mode 2; UART: command `0x0F` (target angle + speed limit) | currently unsupported | currently unsupported | `pos` rad, `vlim` rad/s; raw u32 registers | CAN/UART ID and baud changes are immediate; other CAN configuration follows the power-cycle procedure |
 
 ### Unified Core Ops Support Matrix
 
@@ -77,7 +77,7 @@ If a vendor does not support one of these four baseline modes, gateway returns `
 | hexfellow | supported | unsupported | supported | supported | supported | supported |
 | myactuator | supported | unsupported | supported | supported | supported | supported |
 | hightorque | supported | unsupported | rejected | supported (stop frame) | supported | supported |
-| fashionstar | supported | supported (CAN: power-cycle first; UART: reconnect with new ID) | hold | release | hold | supported |
+| fashionstar | supported | supported (CAN/UART: reconnect with new ID) | hold | release | hold | supported |
 
 ### Parameter Notes by Mode
 
@@ -134,7 +134,7 @@ Recommended: client calls `{"op":"capabilities"}` on connect and adapts UI/flows
         "ops_vendor_native": ["read", "pos_classic", "read_register", "dq_voltage", "dq_current", "brake", "run_mode", "write_register", "periodic_report", "set_zero_position", "store_parameters"]
       },
       "fashionstar": {
-        "transports": ["auto", "socketcan", "mcu-serial", "uart"],
+        "transports": ["auto", "socketcan", "mcu-serial", "uart", "uc06"],
         "models": ["fashionstar", "uart"],
         "modes": ["pos_vel"],
         "ops_unified": ["scan", "set_id", "enable", "disable", "stop", "state_once", "status", "verify"],
@@ -356,7 +356,8 @@ RobStride parameter stream frame:
 - RobStride-only ops: `robstride_ping`, `robstride_read_param`, `robstride_write_param`, `set_active_report`.
 - MyActuator-native ops: `current`, `pos`, `version`, `mode-query`.
 - HighTorque-native ops: `read`, `pos_classic` (classic position `07 07`, `tqe` optional = unlimited), `version` (firmware; MyActuator also supported), `read_register` (`17` family, `addr`/`count`; fixed Int16 since 2026-10-22, returns converted physical values), `torque` (`05 13`, physical Nm, continuous-capable), `dq_voltage` / `dq_current` (combined mode+register frames), `brake` (run mode 15), `run_mode` (table-2 mode switch, real frame), `write_register` (`05 <addr> <val16>`), `periodic_report` (`05 B4`, motor-initiated status stream).
-- FashionStar: existing `pos_vel`, state and raw u32 register interfaces; CAN configuration requires a power cycle, while UART ID/baud changes take effect immediately. Reconnect with the new settings to verify. See the [FashionStar reference](../../motor_cli/FASHIONSTAR_API.md).
+- FashionStar: existing `pos_vel`, state and raw u32 register interfaces; CAN/UART ID and baud changes take effect immediately. For CAN, wait 120 ms before reconnecting with the new ID and matching bitrate. Communication changes stop periodic motion commands. Other CAN configuration follows the power-cycle procedure. Reconnect with the new settings to verify. See the [FashionStar reference](../../motor_cli/FASHIONSTAR_API.md).
+- UC-06: use `transport:"uc06"`, `model:"fashionstar"`, `serial_port` and `can_bitrate` (bit/s, default 1000000). USB serial is fixed at 1 Mbps. These fields apply to `set_target`, `scan`, `set_id` and `verify`; the existing CAN operations are reused.
 - V2 plan can switch to binary frames while preserving operation semantics.
 
 ## Simple HMI (for quick testing)

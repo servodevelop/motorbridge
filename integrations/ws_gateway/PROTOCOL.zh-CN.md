@@ -102,10 +102,11 @@ motorbridge-gateway -- --bind 127.0.0.1:9002 --vendor robstride --channel can0@1
 | --- | --- | --- | --- |
 | `--bind` | string | `127.0.0.1:9002` | WebSocket 监听地址 |
 | `--vendor` | enum | `damiao` | 默认厂商：`damiao` / `robstride` / `hexfellow` / `myactuator` / `hightorque` / `fashionstar` |
-| `--transport` | enum | `auto` | 链路：`auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` / `uart` |
+| `--transport` | enum | `auto` | 链路：`auto` / `socketcan` / `socketcanfd` / `dm-serial` / `dm-device` / `uart` / `uc06` |
 | `--channel` | string | `can0` | CAN 通道。Linux 通常 `can0`；Windows PCAN 可用 `can0@1000000` |
 | `--serial-port` | string | `/dev/ttyACM0` | 串口链路设备 |
 | `--serial-baud` | u32 | `921600` | 串口链路波特率 |
+| `--can-bitrate` | u32 | `1000000` | UC-06 CAN 速率（bit/s），USB 串口固定 1 Mbps |
 | `--dm-device-type` | string | `usb2canfd-dual` | Damiao `dm-device` 适配器类型：`usb2canfd` / `usb2canfd-dual` / `linkx4c` |
 | `--dm-channel` | string | `0` | Damiao `dm-device` 控制通道：`usb2canfd` 用 `0`，`usb2canfd-dual` 用 `0` / `1`，`linkx4c` 用 SDK 通道 `0` / `1` / `2` / `3`；scan 消息不带 `dm_channel` 时会扫描所选适配器全部通道 |
 | `--model` | string | 厂商默认 | 电机型号，例如 `4340P` / `rs-00` |
@@ -709,7 +710,7 @@ Damiao 周期推送：
 | Hexfellow | 是 | 转成 rev / rev/s |
 | HighTorque | 是 | vendor `send_cmd_pos_vel`（`0x07 0x35` 协同帧，与 ABI/Python 能力对齐） |
 | MyActuator | 当前 handler 返回不支持 | 可用 `pos` 原生 op |
-| FashionStar | 是 | 原生模式 2：目标角度 + 速度限制 |
+| FashionStar | 是 | CAN 模式 2；UART 指令 `0x0F`：目标角度 + 速度限制 |
 
 参数：
 
@@ -985,6 +986,10 @@ Hexfellow mode：
 | MyActuator | request status 后 poll |
 | HighTorque | vendor `request_motor_feedback` + `latest_state`（2026-10-24 起连发两帧：17 01 位置/速度/力矩 + 16 0E 温度/错误码，非阻塞；回帧物理量带力矩系数补偿，26 0E 回帧就地补丁 t_mos/fault_code 不推进状态计数） |
 | FashionStar | CAN 查询位置 `0x15/0x16`、状态 `0x14`、温度 `0x13` 和电流 `0x11`；UART 使用 `0x16` 监控指令；速度由相邻位置采样估算，`torq` 为电流 A |
+
+UC-06 与原有 USB CAN 使用相同操作：`set_target`、`scan`、`set_id`、`verify` 设置 `transport:"uc06"`、`model:"fashionstar"`、`serial_port` 和 `can_bitrate`（默认 1000000 bit/s）。其 USB 串口固定 1 Mbps。
+
+FashionStar 的 CAN/UART ID（`0x81`）与波特率（`0x82`）修改立即生效并在断电后保留。通过 `write_register_u32` 写入这两个参数时，返回 `requires_power_cycle:false` 并停止周期运动发送；CAN 写入后等待 120 ms，再用 `set_target` 设置新 ID 和匹配的主机速率，回读确认后恢复控制。
 
 请求：
 
@@ -1684,7 +1689,7 @@ RobStride：
 | Hexfellow | 否 | 不支持 |
 | MyActuator | 否 | 不支持 |
 | HighTorque | 否 | 不支持 |
-| FashionStar | 是 | 写 `0x81`；CAN 重新上电后验证，UART 立即生效并以新 ID 重连验证 |
+| FashionStar | 是 | 写 `0x81`；CAN/UART 均无需重新上电，CAN 等待 120 ms 后以新 ID 验证；`set_id` 返回 `requires_power_cycle:false` |
 
 Damiao 参数：
 

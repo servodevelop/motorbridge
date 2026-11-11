@@ -369,6 +369,7 @@ mod tests {
             channel: "mock".to_string(),
             serial_port: String::new(),
             serial_baud: 0,
+            can_bitrate: 1000000,
             dm_device_type: String::new(),
             dm_channel: String::new(),
             model: "hightorque".to_string(),

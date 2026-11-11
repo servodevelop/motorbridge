@@ -42,9 +42,11 @@ impl SessionCtx {
                             .map_err(|e| e.to_string())?,
                         &self.target.dm_channel,
                     ),
-                    Transport::Uart => Err(motor_core::error::MotorError::InvalidArgument(
-                        "native UART is unsupported by this vendor".to_string(),
-                    )),
+                    Transport::Uart | Transport::Uc06 => {
+                        Err(motor_core::error::MotorError::InvalidArgument(
+                            "native UART and UC-06 are unsupported by this vendor".to_string(),
+                        ))
+                    }
                 }
                 .map_err(|e| format!("open bus failed: {e}"))?;
                 self.controller = Some(ControllerHandle::Damiao(ctrl));
@@ -88,9 +90,11 @@ impl SessionCtx {
                     Transport::DmDevice => Err(motor_core::error::MotorError::InvalidArgument(
                         "dm-device transport is damiao-only".to_string(),
                     )),
-                    Transport::Uart => Err(motor_core::error::MotorError::InvalidArgument(
-                        "native UART is unsupported by this vendor".to_string(),
-                    )),
+                    Transport::Uart | Transport::Uc06 => {
+                        Err(motor_core::error::MotorError::InvalidArgument(
+                            "native UART and UC-06 are unsupported by this vendor".to_string(),
+                        ))
+                    }
                 }
                 .map_err(|e| format!("open bus failed: {e}"))?;
                 let motor = ctrl
@@ -146,9 +150,11 @@ impl SessionCtx {
                     Transport::DmDevice => Err(motor_core::error::MotorError::InvalidArgument(
                         "dm-device transport is damiao-only".to_string(),
                     )),
-                    Transport::Uart => Err(motor_core::error::MotorError::InvalidArgument(
-                        "native UART is unsupported by this vendor".to_string(),
-                    )),
+                    Transport::Uart | Transport::Uc06 => {
+                        Err(motor_core::error::MotorError::InvalidArgument(
+                            "native UART and UC-06 are unsupported by this vendor".to_string(),
+                        ))
+                    }
                 }
                 .map_err(|e| format!("open bus failed: {e}"))?;
                 let fid = if self.target.feedback_id == 0 {
@@ -187,9 +193,11 @@ impl SessionCtx {
                     Transport::DmDevice => Err(motor_core::error::MotorError::InvalidArgument(
                         "dm-device transport is damiao-only".to_string(),
                     )),
-                    Transport::Uart => Err(motor_core::error::MotorError::InvalidArgument(
-                        "native UART is unsupported by this vendor".to_string(),
-                    )),
+                    Transport::Uart | Transport::Uc06 => {
+                        Err(motor_core::error::MotorError::InvalidArgument(
+                            "native UART and UC-06 are unsupported by this vendor".to_string(),
+                        ))
+                    }
                 }
                 .map_err(|e| format!("open bus failed: {e}"))?;
                 let motor = ctrl

@@ -9,6 +9,7 @@ pub(crate) fn parse_args() -> Result<ServerConfig, String> {
     let mut channel = "can0".to_string();
     let mut serial_port = "/dev/ttyACM0".to_string();
     let mut serial_baud = 921600u32;
+    let mut can_bitrate = 1000000u32;
     let mut dm_device_type = "usb2canfd-dual".to_string();
     let mut dm_channel = "0".to_string();
     let mut model = "auto".to_string();
@@ -45,10 +46,11 @@ Examples:\n\
 \n\
 Optional defaults (only used when WS message omits target fields):\n\
   --vendor damiao|robstride|hexfellow|myactuator|hightorque|fashionstar\n\
-  --transport auto|socketcan|socketcanfd|dm-serial|dm-device|uart\n\
+  --transport auto|socketcan|socketcanfd|dm-serial|dm-device|uart|uc06\n\
   --channel can0                SocketCAN/CAN-FD interface, for example can0/can1\n\
   --serial-port /dev/ttyACM0    used by serial transports\n\
   --serial-baud 921600          used by serial transports\n\
+  --can-bitrate 1000000         UC-06 CAN bitrate in bit/s (USB serial is fixed at 1 Mbps)\n\
   --dm-device-type usb2canfd-dual  used only by --transport dm-device\n\
   --dm-channel 0                dm-device SDK channel number; scan JSON omitted dm_channel scans all adapter channels\n\
   --model auto                  default model hint when WS message omits model\n\
@@ -96,6 +98,11 @@ After startup:\n\
                 serial_baud = next
                     .parse::<u32>()
                     .map_err(|e| format!("invalid --serial-baud: {e}"))?;
+            }
+            "--can-bitrate" => {
+                can_bitrate = next
+                    .parse::<u32>()
+                    .map_err(|e| format!("invalid --can-bitrate: {e}"))?;
             }
             "--dm-device-type" => dm_device_type = next.clone(),
             "--dm-channel" => dm_channel = next.clone(),
@@ -157,6 +164,7 @@ After startup:\n\
             channel,
             serial_port,
             serial_baud,
+            can_bitrate,
             dm_device_type,
             dm_channel,
             model,

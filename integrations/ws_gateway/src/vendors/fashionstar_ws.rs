@@ -65,6 +65,15 @@ fn parse_fashionstar_connection_target(v: &Value, base: &Target) -> Result<Targe
         u64::from(base.serial_baud),
         u32::MAX as u64,
     )? as u32;
+    target.can_bitrate = parse_fashionstar_u64(
+        v,
+        "can_bitrate",
+        u64::from(base.can_bitrate),
+        u32::MAX as u64,
+    )? as u32;
+    if target.transport == Transport::Uc06 {
+        target.serial_baud = 1_000_000;
+    }
     target.motor_id = 0;
     target.feedback_id =
         parse_fashionstar_u64(v, "feedback_id", u64::from(CAN_ID), u16::MAX as u64)? as u16;
@@ -165,7 +174,7 @@ pub(crate) fn cmd_set_id_fashionstar(v: &Value, base: &Target) -> Result<Value, 
             "new_motor_id": new_motor_id,
             "feedback_id": CAN_ID,
             "verified": false,
-            "requires_power_cycle": target.transport != Transport::Uart
+            "requires_power_cycle": false
         }))
     })
 }
