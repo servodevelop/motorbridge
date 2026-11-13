@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="FashionStar 接入验收报告 v2：CAN 与 UART/RS-485 双协议交付，USB CAN 与 UC-06 接入指南，多舵机真机测试及统一接口使用示例。">
+  <meta name="description" content="FashionStar 接入验收报告 v2：CAN 与 UART/RS-485 双协议交付，CANable、UC-06 与原生串口真机成果，使用指南及单机、双机实测数据。">
   <meta name="color-scheme" content="light">
   <title>FashionStar 舵机接入验收报告 v2 · 使用指南与真机成果 · motorbridge</title>
   <style>
@@ -216,7 +216,7 @@
       <div class="cover-title"><div><h1>FashionStar 舵机接入<br>工作验收报告</h1><p class="subtitle">双协议统一接入 · 三种连接方案 · 多舵机真机验证</p></div><span class="version" aria-label="报告版本 v2">v2<small>2026.11</small></span></div>
       <dl class="meta">
         <div><dt>项目</dt><dd>motorbridge · FashionStar</dd></div>
-        <div><dt>报告版本</dt><dd>v2 · <time datetime="2026-11-11">2026 年 11 月 11 日</time></dd></div>
+        <div><dt>报告版本</dt><dd>v2 · <time datetime="2026-11-13">2026 年 11 月 13 日</time></dd></div>
         <div><dt>比较基线</dt><dd><code>main</code> · <code>4741f28</code></dd></div>
         <div><dt>交付分支</dt><dd><code>feat/fashionstar-unified</code></dd></div>
         <div><dt>验收内容</dt><dd>协议驱动、适配器接入、统一接口、真机验证与使用指南</dd></div>
@@ -226,7 +226,7 @@
       <div class="metrics" aria-label="交付要点">
         <div class="metric"><b>2 类协议</b><span>CAN 与 UART/RS-485</span></div>
         <div class="metric"><b>3 种接入</b><span>UART · USB CAN · UC-06</span></div>
-        <div class="metric"><b>244 项</b><span>Rust 工作区测试通过</span></div>
+        <div class="metric"><b>246 项</b><span>Rust 工作区测试通过</span></div>
         <div class="metric"><b>15 项</b><span>Python 接口与环境测试通过</span></div>
       </div>
       <p class="proof-line">双机独立寻址 · 多圈与限速运动 · 电流与温度采集 · 即时配置切换 · 断电保存验证</p>
@@ -690,7 +690,7 @@ sleep 0.12
         <div class="data-points">
           <div class="data-point"><strong>1,000 / 1,000</strong><span>CAN 连续目标写入与读回匹配</span></div>
           <div class="data-point"><strong>10 档 / 8 档</strong><span>CAN / UART 通信速率实测覆盖</span></div>
-          <div class="data-point"><strong>3,736 次</strong><span>CAN 双机连续 30 秒反馈成功</span></div>
+          <div class="data-point"><strong>100 Hz / 台</strong><span>CANable 双机连续 25 秒反馈；发送间隔 1 ms</span></div>
         </div>
         <h3>CAN + UC-06 双机验收</h3>
         <p class="small">测试对象：两台型号码 <code>0x0501</code>、固件码 <code>0x0902</code> 的 CAN 舵机，ServoID 0 / 1；UC-06 接入。反馈性能测试使用 CAN 1 Mbps、USB 串口 1 Mbps。</p>
@@ -716,6 +716,20 @@ sleep 0.12
             <tr><th scope="row">配置与连接恢复</th><td>ID、波特率即时切换及两次断电保存验证；总线共同断电恢复、USB 拔插后重新连接与配置回读。</td><td><span class="ok">通过</span></td></tr>
           </tbody>
         </table></div>
+        <h3 id="canable-verification">CANable + CAN 单机与双机验收</h3>
+        <p class="small">测试日期：2026-11-13。CANable 使用 candleLight / gs_usb，经 Linux SocketCAN 接入；CAN 1 Mbps，供电约 23 V，两台空载。舵机型号码 <code>0x0501</code>、固件码 <code>0x0902</code>；先测试 ID 0 / 1 双机，再断开 ID 1 测试 ID 0 单机。本轮接线启用转接板端 120 Ω 终端电阻。</p>
+        <div class="table-wrap"><table class="evidence">
+          <thead><tr><th scope="col">验收项目</th><th scope="col">实测成果</th><th scope="col">结果</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">单机位置与速度</th><td>完成 25 段运动，覆盖 ±45°、30～360°/s 十档速度限值的 360° 往返、720° 多圈、运动中停止、卸力及替换目标；最大落点误差约 0.3°。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">单机并发与持续反馈</th><td>默认发送间隔下，反馈和寄存器读取各 100 Hz、各 1,500 次；另完成 20 次 ±30° 往返并持续采样 2,000 次，每个目标均到达，查询错误数 0。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">双机运动与反馈</th><td>完成独立寻址、十档 360° 行程、相向多圈及状态切换。发送间隔设为 1 ms 后，两台各以约 100 Hz 连续采样 25 秒、各 2,500 次；运动与反馈并行复测中，各完成 20 次目标发送和 2,001 次反馈，查询错误数 0。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">速度切换对照</th><td>单机默认及 1 ms 间隔各 8 轮均启动并达到目标速度；双机 1 ms 间隔下 8 轮均启动，60°/s 设定对应实测 59.75～60.77°/s。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">加减速与原生模式</th><td>核对 0/0、10/19、20/20、100/250、250/10 ms 五组参数；抓包确认小于 20 ms 的项写入 20，其余沿用。通过现有寄存器接口完成原生时间模式 0/1、阻尼及清圈数测试。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">配置与生命周期</th><td>单机、双机均完成十档 CAN 速率、改 ID 后即时识别、参数写入与恢复、置零及重连测试；单机 12 项、双机 24 项无效调用按接口规则拒绝。测试后配置逐项读回一致，恢复 1 Mbps、加减速 0/0 ms 并卸力。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">应用入口</th><td>Rust CLI、Python CLI/SDK、C++/C ABI 和 WebSocket 完成单机、双机实测；扫描、控制、状态读取及连接关闭均按接口执行。</td><td><span class="ok">通过</span></td></tr>
+          </tbody>
+        </table></div>
         <h3>完整反馈频率</h3>
         <p class="small">频率按实际反馈时间戳计算，每次完整反馈包含位置、状态、温度和电流，速度由连续位置采样估算。下表分别列出每组测试的链路与采样条件。</p>
         <div class="table-wrap"><table>
@@ -725,13 +739,25 @@ sleep 0.12
             <tr><th scope="row">UART 全速率回归后复测</th><td>恢复 1M baud；两台各 284 个样本</td><td>每台约 94.6 Hz</td><td>568 次反馈成功</td></tr>
             <tr><th scope="row">UC-06 + CAN 单台</th><td>1 Mbps；持续 5 秒</td><td>88.79 Hz</td><td>445 次完整反馈</td></tr>
             <tr><th scope="row">UC-06 + CAN 双机</th><td>1 Mbps；ID 0 / 1；持续 30 秒</td><td>每台约 62.3 Hz</td><td>3,736 次完整反馈；错误数 0</td></tr>
+            <tr><th scope="row">CANable + CAN 单机定频</th><td>1 Mbps；ID 0；默认发送间隔；持续 20 秒</td><td>100.00 Hz</td><td>2,000 次完整反馈；查询错误数 0</td></tr>
+            <tr><th scope="row">CANable + CAN 单机不限采样频率</th><td>1 Mbps；ID 0；默认发送间隔；持续 8 秒</td><td>438.87 Hz</td><td>3,512 次完整反馈；查询错误数 0</td></tr>
+            <tr><th scope="row">CANable + CAN 双机并发</th><td>1 Mbps；ID 0 / 1；发送间隔 1 ms；持续 25 秒</td><td>每台约 100 Hz</td><td>两台各 2,500 次完整反馈；查询错误数 0</td></tr>
+            <tr><th scope="row">CANable + CAN 双机顺序查询</th><td>1 Mbps；测试端逐次完成整组反馈查询；不限采样频率；持续 8 秒</td><td>每台约 202.7 Hz</td><td>两台各 1,622 次完整反馈；查询错误数 0</td></tr>
           </tbody>
         </table></div>
+        <h3 id="reproduction-script">CAN 温度反馈跳变复现：90°/s 运动与连续采样</h3>
+        <p><strong>发现的现象：</strong>空载舵机往返运动、接近目标角度时，温度寄存器 <code>0x13</code> 出现单次读数跳变，随后复查恢复到原有温度范围。90°/s 对照测试的第 4 段中，反馈温度由 <strong>34.26°C → 84.20°C → 34.35°C</strong>，对应原始 ADC 为 <code>1696 → 529 → 1693</code>；首次复查应答距跳变约 56 ms。第 9 段另捕获到原始 ADC 短暂返回 0，后续三次复查均恢复到约 34.46～34.49°C。</p>
+        <p><strong>触发方法：</strong>通过 UC-06 连接一台空载 CAN 舵机，CAN 速率设为 1 Mbps。使用 motorbridge 将加速、减速时间各设为 500 ms，以 90°/s（15 转/分钟）速度上限在绝对角度 0.1° 与 360.1° 之间往返；每段运动最多连续采样 5.4 秒，逐次读取温度寄存器，收到应答后立即发起下一次读取。下方<a href="reproduce_temperature.py" download>单文件复现脚本</a>自动执行这一流程，并在捕获跳变后记录原始值及三次复查结果。</p>
+        <p><strong>复现结果：</strong>2026-11-13 在 UC-06、CAN 1 Mbps、空载舵机 ID 1（型号码 <code>0x0501</code>、固件码 <code>0x0902</code>）上完成 90°/s 对照测试：<strong>20 段运动、38,235 次温度采样，2 段出现跳变，实测发生比例为 10%</strong>。相同条件下，60°/s 的 20 段运动中有 1 段出现跳变，比例为 5%；这组对照中，90°/s 的发生比例更高。正式复现脚本另行运行，在第 4 段、约 <strong>21.06 秒</strong>捕获到 84.60°C 的跳值，随后复查恢复到约 34.74～34.76°C，脚本自动结束并恢复参数、卸力。</p>
+        <p>完成<a href="#guide">第 05 节构建</a>后，在仓库根目录执行：</p>
+        <div class="code-block" id="reproduction-command"><div class="code-label">终端 · 运行复现脚本</div><pre><code class="language-bash">python3 docs/zh/fashionstar/reproduce_temperature.py</code></pre></div>
+        <p>默认端口 <code>/dev/ttyUSB0</code>、ServoID <code>1</code>，可用 <code>--port</code> 和 <code>--motor-id</code> 指定。脚本以 ADC 超出有效范围或换算温度达到 65°C 作为捕获条件，输出原始值、当前位置及三次间隔约 50 ms 的复查值，并返回 <code>reproduced: true</code>。</p>
+        <p class="small">默认最多执行 30 段运动，可通过 <code>--moves</code> 调整。命中后自动结束；正常退出或 Ctrl+C 时，脚本卸力并恢复原模式、目标角度、加减速时间及速度寄存器。命中时退出码为 0，达到尝试上限时为 1。</p>
         <h3>软件与接口验收</h3>
         <div class="table-wrap"><table class="evidence">
           <thead><tr><th scope="col">验证项目</th><th scope="col">成果</th><th scope="col">结果</th></tr></thead>
           <tbody>
-            <tr><th scope="row">Rust 工作区</th><td><code>cargo test --workspace --locked --offline</code>：244 项通过，覆盖协议、控制器、接口与网关。</td><td><span class="ok">通过</span></td></tr>
+            <tr><th scope="row">Rust 工作区</th><td><code>cargo test --workspace --all-targets --locked --offline</code>：246 项通过，覆盖协议、控制器、接口与网关。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">Python 接口</th><td>15 项 API 元数据、状态快照、导入与平台传输测试通过。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">通信与异常路径</th><td>分段回包、噪声、参数边界、错误 ID、初始化状态与超时恢复；跨 SDK、CLI、C ABI 和 WebSocket 联调。</td><td><span class="ok">通过</span></td></tr>
             <tr><th scope="row">配置切换</th><td>WebSocket 写入 ID / 波特率后停止周期目标；两种配置写入后的旧目标执行数均为 0。</td><td><span class="ok">通过</span></td></tr>
@@ -752,7 +778,7 @@ sleep 0.12
             <tr><th scope="row">版本与验证</th><td>交付分支 <code>feat/fashionstar-unified</code>；工作区测试、UART/CAN 真机验证、跨接口联调、格式、静态检查及 Windows 编译记录。</td></tr>
           </tbody>
         </table></div>
-        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 已在 motorbridge 中形成 <strong>CAN 与 UART/RS-485 双协议、三种连接方案、多语言统一接口</strong>的完整交付。设备发现、位置与速度上限控制、持续状态采集、配置管理及多设备操作均已接入，并通过软件回归和双协议真机测试。v2 使用指南进一步将交付成果落实为可直接执行的接线、构建、控制与反馈流程。</p></div>
+        <div class="conclusion"><h3>验收结论</h3><p>FashionStar 已在 motorbridge 中形成 <strong>CAN 与 UART/RS-485 双协议、三种连接方案、多语言统一接口</strong>的完整交付。设备发现、位置与速度上限控制、持续状态采集、配置管理及多设备操作均已接入，并完成软件回归和 UART、UC-06、CANable 真机验证。CANable 单机稳定完成 100 Hz 采样，双机在 1 ms 发送间隔下达到每台约 100 Hz。v2 使用指南提供可直接执行的接线、构建、控制与反馈流程。</p></div>
 
         <h3>版本与技术依据</h3>
         <ul class="refs">
@@ -768,7 +794,7 @@ sleep 0.12
         </ul>
       </section>
     </main>
-    <footer><span>motorbridge · FashionStar 接入验收报告 v2</span><span>2026-11-11 · 双协议交付 · 使用指南 · 真机成果</span></footer>
+    <footer><span>motorbridge · FashionStar 接入验收报告 v2</span><span>2026-11-13 · 双协议交付 · 使用指南 · 真机成果</span></footer>
   </article>
 </body>
 </html>
